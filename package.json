@@ -1,0 +1,43 @@
+{
+  "name": "swagger-tanstack-builder",
+  "version": "0.1.0",
+  "description": "Generate TanStack Query (queryOptions) hooks, APIs and types from a Swagger/OpenAPI spec, split by controller.",
+  "type": "module",
+  "bin": {
+    "swagger-tanstack-builder": "./dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "start": "node ./dist/cli.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "swagger",
+    "openapi",
+    "tanstack",
+    "react-query",
+    "queryOptions",
+    "codegen",
+    "axios"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@apidevtools/swagger-parser": "^10.1.1",
+    "prettier": "^3.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.3"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": ">=5.0.0",
+    "axios": ">=1.0.0"
+  }
+}
