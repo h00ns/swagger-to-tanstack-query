@@ -4,7 +4,7 @@ import { generate } from "./index.js";
 
 async function main() {
   const cwd = process.cwd();
-  console.log("swagger-tanstack-builder");
+  console.log("swagger-to-tanstack-query");
 
   const config = await loadConfig(cwd);
   console.log(`  spec   : ${config.url}`);

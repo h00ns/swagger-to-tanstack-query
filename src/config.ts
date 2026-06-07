@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-export const CONFIG_FILENAME = "swagger-tanstack-builder.config.json";
+export const CONFIG_FILENAME = "swagger-to-tanstack-query.config.json";
 
 export interface ClientConfig {
   /** Import path of the user's axios instance, e.g. `@/lib/axios`. */

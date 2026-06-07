@@ -16,7 +16,7 @@ export async function generate(config: ResolvedConfig): Promise<WriteResult> {
   return writeOutput(spec, config);
 }
 
-/** Load `swagger-tanstack-builder.config.json` from `cwd` and run. */
+/** Load `swagger-to-tanstack-query.config.json` from `cwd` and run. */
 export async function generateFromConfig(cwd: string = process.cwd()): Promise<WriteResult> {
   const config = await loadConfig(cwd);
   return generate(config);

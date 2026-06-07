@@ -1,10 +1,10 @@
 {
-  "name": "swagger-tanstack-builder",
+  "name": "swagger-to-tanstack-query",
   "version": "0.1.0",
   "description": "Generate TanStack Query (queryOptions) hooks, APIs and types from a Swagger/OpenAPI spec, split by controller.",
   "type": "module",
   "bin": {
-    "swagger-tanstack-builder": "./dist/cli.js"
+    "swagger-to-tanstack-query": "./dist/cli.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

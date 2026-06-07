@@ -1,4 +1,4 @@
-# swagger-tanstack-builder
+# swagger-to-tanstack-query
 
 > A code generator that turns a **Swagger / OpenAPI** spec into typed **TanStack
 > Query** code — split by controller — using **your own axios instance**.
@@ -8,7 +8,7 @@ fully-typed **API functions**, **`queryOptions`**, and **`useMutation` hooks** i
 a clean per-controller folder structure.
 
 ```
-swagger-tanstack-builder.config.json   ──▶   npm run codegen   ──▶   src/api/<controller>/{index,types,apis,queries,mutations}.ts
+swagger-to-tanstack-query.config.json   ──▶   npm run codegen   ──▶   src/api/<controller>/{index,types,apis,queries,mutations}.ts
 ```
 
 ---
@@ -53,7 +53,7 @@ swagger-tanstack-builder.config.json   ──▶   npm run codegen   ──▶  
 ## Install
 
 ```bash
-npm install -D swagger-tanstack-builder
+npm install -D swagger-to-tanstack-query
 ```
 
 Peer dependencies (in your app):
@@ -110,7 +110,7 @@ export interface ApiError {
 
 ### 2. Add the config file
 
-Create `swagger-tanstack-builder.config.json` in your project root:
+Create `swagger-to-tanstack-query.config.json` in your project root:
 
 ```json
 {
@@ -129,7 +129,7 @@ Create `swagger-tanstack-builder.config.json` in your project root:
 
 ```json
 // package.json
-{ "scripts": { "codegen": "swagger-tanstack-builder" } }
+{ "scripts": { "codegen": "swagger-to-tanstack-query" } }
 ```
 
 ```bash
@@ -137,7 +137,7 @@ npm run codegen
 ```
 
 ```
-swagger-tanstack-builder
+swagger-to-tanstack-query
   spec   : https://api.example.com/v3/api-docs
   output : ./src/api
   client : axiosInstance from "@/lib/axios"
@@ -161,7 +161,7 @@ function ContactName({ id }: { id: number }) {
 
 ## Configuration
 
-The config file `swagger-tanstack-builder.config.json` is read from the directory
+The config file `swagger-to-tanstack-query.config.json` is read from the directory
 where the command runs (your project root).
 
 ```jsonc
@@ -643,9 +643,9 @@ export const listUsers = ({ params }: { params?: { "page-size"?: number } }) =>
 ## Programmatic API
 
 ```ts
-import { generateFromConfig, generate } from "swagger-tanstack-builder";
+import { generateFromConfig, generate } from "swagger-to-tanstack-query";
 
-// read swagger-tanstack-builder.config.json from cwd
+// read swagger-to-tanstack-query.config.json from cwd
 await generateFromConfig();
 
 // or pass a fully-resolved config
@@ -665,7 +665,7 @@ await generate({
 ## Troubleshooting
 
 **“config not found”** — the file must be named exactly
-`swagger-tanstack-builder.config.json` and live in the directory you run the
+`swagger-to-tanstack-query.config.json` and live in the directory you run the
 command from.
 
 **I only have the Swagger UI URL** — the machine-readable spec is served
