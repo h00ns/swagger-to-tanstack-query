@@ -81,8 +81,12 @@ describe("apis.ts", () => {
     expect(apis).toContain(".then((res) => res.data.data)");
   });
 
+  it("uses a single destructured object argument", () => {
+    expect(apis).toContain("export const delete_ = ({ id }: { id: number }) =>");
+    expect(apis).toContain("export const getUser = ({ id, headers }:");
+  });
+
   it("does not unwrap void responses", () => {
-    expect(apis).toMatch(/export const delete_ = \(id: number\) =>\s*\n\s*client\.delete<void>/);
     expect(apis).toContain("client.delete<void>(`/users/${id}`).then((res) => res.data)");
   });
 
@@ -108,7 +112,7 @@ describe("queries.ts", () => {
     const q = generateQueries(controller("user"), baseConfig);
     expect(q).toContain('import { queryOptions } from "@tanstack/react-query";');
     expect(q).toContain("export const userQueries = {");
-    expect(q).toContain('queryKey: ["user", "getUser", id, headers]');
+    expect(q).toContain('queryKey: ["user", "getUser", args]');
   });
 
   it("applies the error type as explicit generics when configured", () => {
@@ -127,13 +131,15 @@ describe("mutations.ts", () => {
   it("generates useXxx hooks that accept options", () => {
     const m = generateMutations(controller("user"), baseConfig);
     expect(m).toContain("export const useCreateUser = (options?:");
-    expect(m).toContain("mutationFn: (body: User) => apis.createUser(body)");
+    expect(m).toContain("mutationFn: (vars: { body: User }) => apis.createUser(vars)");
     expect(m).toContain("...options,");
   });
 
-  it("combines multiple inputs into a single variables object", () => {
+  it("variables is a single object, forwarded to the api", () => {
     const m = generateMutations(controller("user"), baseConfig);
-    expect(m).toContain("apis.uploadAvatar(id, body)");
+    expect(m).toContain("export const useUploadAvatar = (options?:");
+    expect(m).toContain("apis.uploadAvatar(vars)");
+    expect(m).toMatch(/mutationFn: \(vars: \{ id: number;/);
   });
 
   it("uses the configured error type, else DefaultError", () => {

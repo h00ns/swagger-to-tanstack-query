@@ -79,6 +79,17 @@ function urlExpr(op: OperationIR): string {
   return `\`${path}\``;
 }
 
+/** `{ a: T; b?: U }` object type for all of an operation's inputs. */
+function inputsObjectType(inputs: Input[]): string {
+  const shape = inputs.map((i) => `${i.name}${i.optional ? "?" : ""}: ${i.tsType}`).join("; ");
+  return `{ ${shape} }`;
+}
+
+/** Comma-separated input names, e.g. `id, body, params`. */
+function inputNames(inputs: Input[]): string {
+  return inputs.map((i) => i.name).join(", ");
+}
+
 /** JSDoc block from `summary` + `@deprecated`. */
 function jsdoc(op: OperationIR): string {
   const lines: string[] = [];
@@ -162,7 +173,8 @@ function apiTypeBlob(op: OperationIR): string {
 
 function apiFn(op: OperationIR, dataField: string | null): string {
   const inputs = operationInputs(op);
-  const sig = inputs.map((i) => `${i.name}${i.optional ? "?" : ""}: ${i.tsType}`).join(", ");
+  // Single destructured object argument: { id, body, params, headers }.
+  const sig = inputs.length ? `{ ${inputNames(inputs)} }: ${inputsObjectType(inputs)}` : "";
   const resp = op.responseType;
   const url = urlExpr(op);
   const hasBody = op.method === "post" || op.method === "put" || op.method === "patch";
@@ -235,10 +247,12 @@ function paramTypeBlob(op: OperationIR): string {
 
 function queryEntry(controller: ControllerIR, op: OperationIR, errorType: string | null): string {
   const inputs = operationInputs(op);
-  const sig = inputs.map((i) => `${i.name}${i.optional ? "?" : ""}: ${i.tsType}`).join(", ");
-  const callArgs = inputs.map((i) => i.name).join(", ");
+  const hasArgs = inputs.length > 0;
+  const sig = hasArgs ? `args: ${inputsObjectType(inputs)}` : "";
+  const callArg = hasArgs ? "args" : "";
 
-  const keyParts = [JSON.stringify(controller.dirName), JSON.stringify(op.name), ...inputs.map((i) => i.name)];
+  const keyParts = [JSON.stringify(controller.dirName), JSON.stringify(op.name)];
+  if (hasArgs) keyParts.push("args");
   const queryKey = `[${keyParts.join(", ")}]`;
 
   // Explicit generics so the configured error type flows to useQuery's `error`.
@@ -250,7 +264,7 @@ function queryEntry(controller: ControllerIR, op: OperationIR, errorType: string
     `${jsdoc(op)}${op.name}: (${sig}) =>\n` +
     `  queryOptions${generics}({\n` +
     `    queryKey: ${queryKey},\n` +
-    `    queryFn: () => apis.${op.name}(${callArgs}),\n` +
+    `    queryFn: () => apis.${op.name}(${callArg}),\n` +
     `  }),`
   );
 }
@@ -288,27 +302,12 @@ export function generateMutations(controller: ControllerIR, config: ResolvedConf
 function mutationHook(op: OperationIR, errorType: string): string {
   const hookName = `use${pascalCase(op.name)}`;
   const inputs = operationInputs(op);
+  const hasArgs = inputs.length > 0;
 
-  // (mutationFn signature, value passed to the api call, TVariables type)
-  let variables: string;
-  let callArgs: string;
-  let varsType: string;
-  if (inputs.length === 0) {
-    variables = "()";
-    callArgs = "";
-    varsType = "void";
-  } else if (inputs.length === 1) {
-    const only = inputs[0];
-    variables = `(${only.name}${only.optional ? "?" : ""}: ${only.tsType})`;
-    callArgs = only.name;
-    varsType = only.optional ? `${wrapUnion(only.tsType)} | void` : only.tsType;
-  } else {
-    const shape = inputs.map((i) => `${i.name}${i.optional ? "?" : ""}: ${i.tsType}`).join("; ");
-    const destructure = inputs.map((i) => i.name).join(", ");
-    variables = `({ ${destructure} }: { ${shape} })`;
-    callArgs = destructure;
-    varsType = `{ ${shape} }`;
-  }
+  // The mutation's `variables` IS the api's single object argument.
+  const varsType = hasArgs ? inputsObjectType(inputs) : "void";
+  const variables = hasArgs ? `(vars: ${varsType})` : "()";
+  const callArg = hasArgs ? "vars" : "";
 
   const dataType = `Awaited<ReturnType<typeof apis.${op.name}>>`;
   const optionsType = `Omit<UseMutationOptions<${dataType}, ${errorType}, ${varsType}>, "mutationFn">`;
@@ -316,15 +315,10 @@ function mutationHook(op: OperationIR, errorType: string): string {
   return (
     `${jsdoc(op)}export const ${hookName} = (options?: ${optionsType}) =>\n` +
     `  useMutation({\n` +
-    `    mutationFn: ${variables} => apis.${op.name}(${callArgs}),\n` +
+    `    mutationFn: ${variables} => apis.${op.name}(${callArg}),\n` +
     `    ...options,\n` +
     `  });`
   );
-}
-
-/** Parenthesize a union before appending ` | void`. */
-function wrapUnion(type: string): string {
-  return /\|/.test(type) && !type.startsWith("{") ? `(${type})` : type;
 }
 
 // ---------------------------------------------------------------------------

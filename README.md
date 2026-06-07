@@ -152,7 +152,7 @@ import { useQuery } from "@tanstack/react-query";
 import { contactQueries } from "@/api/contact";
 
 function ContactName({ id }: { id: number }) {
-  const { data } = useQuery(contactQueries.getContact(id));
+  const { data } = useQuery(contactQueries.getContact({ contactId: id }));
   return <span>{data?.name}</span>; // payload is unwrapped
 }
 ```
@@ -234,7 +234,7 @@ Set `response.dataField` and generated apis unwrap it, so hooks return the
 ```
 
 ```ts
-const { data } = useQuery(contactQueries.getContact(1));
+const { data } = useQuery(contactQueries.getContact({ contactId: 1 }));
 //      ^? Detail | undefined          (not CommonResponseDetail)
 ```
 
@@ -270,10 +270,10 @@ interfaces are **no longer generated**:
 
 ```ts
 // apis.ts
-export const getContact = (contactId: number) =>
+export const getContact = ({ contactId }: { contactId: number }) =>
   client.get<CommonResponse<Detail>>(`/api/v1/contacts/${contactId}`).then((res) => res.data.data);
 
-export const deleteContact = (contactId: number) =>
+export const deleteContact = ({ contactId }: { contactId: number }) =>
   client.delete<CommonResponse<unknown>>(`/api/v1/contacts/${contactId}`).then((res) => res.data.data);
 ```
 
@@ -292,7 +292,7 @@ every hook's `error` becomes `AxiosError<YourType>`, applied per-hook:
 ```
 
 ```ts
-const { error } = useQuery(contactQueries.getContact(1));
+const { error } = useQuery(contactQueries.getContact({ contactId: 1 }));
 //      ^? AxiosError<ApiError> | null
 //         error.response?.data.errorCode  ✅ typed
 
@@ -362,25 +362,28 @@ export interface Detail {
 
 ### `apis.ts`
 
-Plain functions calling **your** axios instance. Argument order is:
-**path params → request body → `params` object → `headers` object**.
+Plain functions calling **your** axios instance. Every function takes a **single
+object argument** containing all of `{ ...pathParams, body, params, headers }`
+that the operation needs — so call sites are named and order-independent, which
+matters once an endpoint has more than one path param.
 
 ```ts
 // contact/apis.ts
 import { axiosInstance as client } from "@/lib/axios";
-import type { CommonResponseDetail, Create } from "./types";
+import type { CommonResponse } from "@/lib/axios";
+import type { Detail, Create } from "./types";
 
 /** 전화번호부 상세 조회 */
-export const getContact = (contactId: number) =>
-  client.get<CommonResponseDetail>(`/api/v1/contacts/${contactId}`).then((res) => res.data.data);
+export const getContact = ({ contactId }: { contactId: number }) =>
+  client.get<CommonResponse<Detail>>(`/api/v1/contacts/${contactId}`).then((res) => res.data.data);
 
 /** 전화번호부 생성 */
-export const createContact = (body: Create) =>
-  client.post<CommonResponseCreate>(`/api/v1/contacts`, body).then((res) => res.data.data);
+export const createContact = ({ body }: { body: Create }) =>
+  client.post<CommonResponse<Create>>(`/api/v1/contacts`, body).then((res) => res.data.data);
 
 /** 전화번호부 단건 삭제 (소프트) */
-export const deleteContact = (contactId: number) =>
-  client.delete<CommonResponseVoid>(`/api/v1/contacts/${contactId}`).then((res) => res.data.data);
+export const deleteContact = ({ contactId }: { contactId: number }) =>
+  client.delete<CommonResponse<unknown>>(`/api/v1/contacts/${contactId}`).then((res) => res.data.data);
 ```
 
 ### `queries.ts`
@@ -396,10 +399,10 @@ import type { ApiError } from "@/lib/axios";
 import * as apis from "./apis";
 
 export const contactQueries = {
-  getContact: (contactId: number) =>
+  getContact: (args: { contactId: number }) =>
     queryOptions<Awaited<ReturnType<typeof apis.getContact>>, AxiosError<ApiError>>({
-      queryKey: ["contact", "getContact", contactId],
-      queryFn: () => apis.getContact(contactId),
+      queryKey: ["contact", "getContact", args],
+      queryFn: () => apis.getContact(args),
     }),
 };
 ```
@@ -411,8 +414,8 @@ export const contactQueries = {
 
 One `useXxx` hook per mutating endpoint. Each accepts an optional
 `UseMutationOptions` (minus `mutationFn`), so you can pass `onSuccess`,
-`onError`, `retry`, … A single input is passed directly; multiple inputs are
-combined into one `variables` object.
+`onError`, `retry`, … The mutation's `variables` is the same single object the
+api takes (`{ ...pathParams, body, params, headers }`).
 
 ```ts
 // contact/mutations.ts
@@ -426,12 +429,16 @@ import type { Create, Update } from "./types";
 /** 전화번호부 생성 */
 export const useCreateContact = (
   options?: Omit<
-    UseMutationOptions<Awaited<ReturnType<typeof apis.createContact>>, AxiosError<ApiError>, Create>,
+    UseMutationOptions<
+      Awaited<ReturnType<typeof apis.createContact>>,
+      AxiosError<ApiError>,
+      { body: Create }
+    >,
     "mutationFn"
   >,
 ) =>
   useMutation({
-    mutationFn: (body: Create) => apis.createContact(body),
+    mutationFn: (vars: { body: Create }) => apis.createContact(vars),
     ...options,
   });
 
@@ -447,11 +454,13 @@ export const useUpdateContact = (
   >,
 ) =>
   useMutation({
-    mutationFn: ({ contactId, body }: { contactId: number; body: Update }) =>
-      apis.updateContact(contactId, body),
+    mutationFn: (vars: { contactId: number; body: Update }) => apis.updateContact(vars),
     ...options,
   });
 ```
+
+> The mutation's `variables` **is** the api's object argument, so every hook is
+> called the same way: `mutate({ ...pathParams, body, params })`.
 
 ### `index.ts`
 
@@ -484,7 +493,7 @@ import { useQuery } from "@tanstack/react-query";
 import { contactQueries } from "@/api/contact";
 
 function ContactDetail({ id }: { id: number }) {
-  const { data, isLoading, error } = useQuery(contactQueries.getContact(id));
+  const { data, isLoading, error } = useQuery(contactQueries.getContact({ contactId: id }));
 
   if (isLoading) return <p>로딩 중…</p>;
   if (error) return <p>{error.response?.data.message}</p>;
@@ -495,7 +504,7 @@ function ContactDetail({ id }: { id: number }) {
 The same options work with `useSuspenseQuery`:
 
 ```tsx
-const { data } = useSuspenseQuery(contactQueries.getContact(id));
+const { data } = useSuspenseQuery(contactQueries.getContact({ contactId: id }));
 //      ^? Detail (non-nullable under Suspense)
 ```
 
@@ -505,7 +514,16 @@ const { data } = useSuspenseQuery(contactQueries.getContact(id));
 import { useCreateContact } from "@/api/contact";
 
 const { mutate, isPending } = useCreateContact();
-mutate({ name: "홍길동", phoneNumber: "010-0000-0000" });
+mutate({ body: { name: "홍길동", phoneNumber: "010-0000-0000" } });
+```
+
+For an endpoint with a path param + body, the same single object carries both:
+
+```tsx
+import { useUpdateContact } from "@/api/contact";
+
+const { mutate } = useUpdateContact();
+mutate({ contactId: 1, body: { name: "새 이름" } });
 ```
 
 ### Invalidation
@@ -522,7 +540,7 @@ function useCreateContactAndRefresh() {
       // everything under the "contact" controller
       queryClient.invalidateQueries({ queryKey: ["contact"] });
       // or one specific query
-      queryClient.invalidateQueries({ queryKey: contactQueries.getContact(1).queryKey });
+      queryClient.invalidateQueries({ queryKey: contactQueries.getContact({ contactId: 1 }).queryKey });
     },
   });
 }
@@ -535,7 +553,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { contactQueries } from "@/api/contact";
 
 const queryClient = new QueryClient();
-await queryClient.prefetchQuery(contactQueries.getContact(1));
+await queryClient.prefetchQuery(contactQueries.getContact({ contactId: 1 }));
 ```
 
 ---
@@ -549,12 +567,12 @@ axios request config. Real header names are preserved:
 
 ```ts
 // GET /users/{id} with a required X-Trace-Id header
-export const getUser = (id: number, headers: { "X-Trace-Id": string }) =>
+export const getUser = ({ id, headers }: { id: number; headers: { "X-Trace-Id": string } }) =>
   client.get<User>(`/users/${id}`, { headers }).then((res) => res.data);
 ```
 
 ```ts
-useQuery(userQueries.getUser(1, { "X-Trace-Id": traceId }));
+useQuery(userQueries.getUser({ id: 1, headers: { "X-Trace-Id": traceId } }));
 ```
 
 > Auth headers handled by your axios interceptor don't appear here — only header
@@ -565,7 +583,13 @@ useQuery(userQueries.getUser(1, { "X-Trace-Id": traceId }));
 Binary fields become `Blob`, and the request body is assembled into a `FormData`:
 
 ```ts
-export const uploadAvatar = (id: number, body: { file?: Blob; caption?: string }) => {
+export const uploadAvatar = ({
+  id,
+  body,
+}: {
+  id: number;
+  body: { file?: Blob; caption?: string };
+}) => {
   const formData = new FormData();
   Object.entries(body).forEach(([key, value]) => {
     if (value === undefined || value === null) return;
@@ -581,7 +605,7 @@ A query/header param like `page-size` keeps its **real wire name** as the object
 key (so axios serializes it correctly), while remaining valid TypeScript:
 
 ```ts
-export const listUsers = (params?: { "page-size"?: number }) =>
+export const listUsers = ({ params }: { params?: { "page-size"?: number } }) =>
   client.get<User[]>(`/users`, { params }).then((res) => res.data);
 ```
 
@@ -598,14 +622,16 @@ export const listUsers = (params?: { "page-size"?: number }) =>
 | Query export object          | `<controllerCamel>Queries`    | `contactQueries`                         |
 | Mutation hook                | `use` + PascalCase(operation) | `createContact` → `useCreateContact`     |
 | Schema type                  | sanitized schema name         | `Page«User»` → `PageOfUser`              |
-| Query key                    | `[dir, op, ...args]`          | `["contact", "getContact", 1]`           |
+| Query key                    | `[dir, op, args]`             | `["contact", "getContact", { contactId: 1 }]` |
 
 ---
 
 ## Conventions & design decisions
 
 - **`GET`/`HEAD` are queries; everything else is a mutation.**
-- **Argument order:** path params → request body → `params` object → `headers` object.
+- **Single object argument:** every api/query/mutation takes one object with keys
+  `{ ...pathParams, body, params, headers }` — order-independent and safe with
+  multiple path params. Functions with no inputs take no argument.
 - **`params`/`headers` objects are optional** only when every contained parameter is optional.
 - **Responses** use the first `2xx` response's `application/json` schema (falls back to `default`, then `void`).
 - **Multi-tag operations** are emitted into **every** controller they're tagged with (matching how Swagger UI groups them).
@@ -628,7 +654,7 @@ await generate({
   output: "./src/api",
   outputDir: "/abs/path/src/api",
   client: { path: "@/lib/axios", name: "axiosInstance" },
-  response: { dataField: "data" },
+  response: { dataField: "data", envelope: { path: "@/lib/axios", name: "CommonResponse" } },
   error: { path: "@/lib/axios", name: "ApiError" },
   format: true,
 });
@@ -660,7 +686,7 @@ verbatim. Make sure your `tsconfig.json` `paths` (and bundler) define the alias.
 
 ## Limitations & roadmap
 
-- No per-query option injection yet (use `useQuery({ ...queries.x(id), enabled })` for now).
+- No per-query option injection yet (use `useQuery({ ...queries.x({ id }), enabled })` for now).
 - No `infiniteQueryOptions` generation for paginated endpoints.
 - Enums are string-literal unions (no `enum`/`as const` object option).
 - One success media type (`application/json`) per response.
