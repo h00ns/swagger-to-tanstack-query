@@ -1,4 +1,4 @@
-import { loadConfig, type ResolvedConfig, type UserConfig } from "./config.js";
+import { envelopeLocalName, loadConfig, type ResolvedConfig, type UserConfig } from "./config.js";
 import { fetchSpec } from "./fetcher.js";
 import { parseSpec } from "./parser.js";
 import { writeOutput, type WriteResult } from "./writer.js";
@@ -9,7 +9,10 @@ export type { ParsedSpec, ControllerIR, OperationIR } from "./types.js";
 /** Run the full pipeline using an already-resolved config. */
 export async function generate(config: ResolvedConfig): Promise<WriteResult> {
   const doc = await fetchSpec(config.url);
-  const spec = parseSpec(doc, { dataField: config.response.dataField });
+  const envelopeName = config.response.envelope
+    ? envelopeLocalName(config.response.envelope)
+    : null;
+  const spec = parseSpec(doc, { dataField: config.response.dataField, envelopeName });
   return writeOutput(spec, config);
 }
 

@@ -92,6 +92,14 @@ axiosInstance.interceptors.request.use((config) => {
   return config;
 });
 
+// Optional: a generic response envelope (see "Generic envelope")
+export interface CommonResponse<T> {
+  result?: boolean;
+  data?: T;
+  message?: string;
+  errorCode?: string | null;
+}
+
 // Optional: a shared error-body type (see "Common error type")
 export interface ApiError {
   result: false;
@@ -109,7 +117,10 @@ Create `swagger-tanstack-builder.config.json` in your project root:
   "url": "https://api.example.com/v3/api-docs",
   "output": "./src/api",
   "client": { "path": "@/lib/axios", "name": "axiosInstance" },
-  "response": { "dataField": "data" },
+  "response": {
+    "dataField": "data",
+    "envelope": { "path": "@/lib/axios", "name": "CommonResponse" }
+  },
   "error": { "path": "@/lib/axios", "name": "ApiError" }
 }
 ```
@@ -167,8 +178,12 @@ where the command runs (your project root).
     "name": "axiosInstance"  // named export; omit (or "default") for a default import
   },
 
-  // Optional: common success-envelope unwrapping.
-  "response": { "dataField": "data" },
+  // Optional: common success-envelope handling.
+  // `envelope` reuses one generic CommonResponse<T> instead of per-endpoint interfaces.
+  "response": {
+    "dataField": "data",
+    "envelope": { "path": "@/lib/axios", "name": "CommonResponse" }
+  },
 
   // Optional: common error type, applied as AxiosError<T> to hooks.
   "error": { "path": "@/lib/axios", "name": "ApiError" },
@@ -185,6 +200,7 @@ where the command runs (your project root).
 | `client.path`        | `string`  |    ✅    | —           | Import path of your axios instance module.                                   |
 | `client.name`        | `string`  |    –     | `"default"` | Named export to import. Omit for a default export.                           |
 | `response.dataField` | `string`  |    –     | _(off)_     | Unwrap this envelope field as the payload. See below.                        |
+| `response.envelope`  | `object`  |    –     | _(off)_     | `{ path, name }` of a generic envelope type → `Envelope<Inner>`. Requires `dataField`. |
 | `error.path`         | `string`  |    –     | —           | Import path of your error-body type. See below.                              |
 | `error.name`         | `string`  |    –     | `"default"` | Named export of the error type. Omit for a default export.                   |
 | `format`             | `boolean` |    –     | `true`      | Format generated files with Prettier.                                        |
@@ -225,6 +241,46 @@ const { data } = useQuery(contactQueries.getContact(1));
 - Applied **only** to operations whose success schema actually has the field —
   `void`/`204` responses and field-less bodies are left untouched.
 - The axios generic still uses the full envelope type, so unwrapping is type-safe.
+
+#### Generic envelope (recommended)
+
+By default each endpoint gets its own `CommonResponseXxx` interface, duplicating
+`result` / `message` / `errorCode` everywhere. Instead, define **one generic
+envelope** in your module and reference it via `response.envelope`:
+
+```ts
+// @/lib/axios.ts
+export interface CommonResponse<T> {
+  result?: boolean;
+  data?: T;
+  message?: string;
+  errorCode?: string | null;
+}
+```
+
+```jsonc
+"response": {
+  "dataField": "data",
+  "envelope": { "path": "@/lib/axios", "name": "CommonResponse" }
+}
+```
+
+Now responses are typed as `CommonResponse<Inner>` and the per-endpoint envelope
+interfaces are **no longer generated**:
+
+```ts
+// apis.ts
+export const getContact = (contactId: number) =>
+  client.get<CommonResponse<Detail>>(`/api/v1/contacts/${contactId}`).then((res) => res.data.data);
+
+export const deleteContact = (contactId: number) =>
+  client.delete<CommonResponse<unknown>>(`/api/v1/contacts/${contactId}`).then((res) => res.data.data);
+```
+
+- Requires `dataField` (it's the type parameter slot).
+- The inner type (`Detail`, `Array<User>`, …) is extracted from the envelope's
+  `dataField`; void payloads become `CommonResponse<unknown>`.
+- `name` may be a named or default export (same rules as `client`/`error`).
 
 ### Common error type
 

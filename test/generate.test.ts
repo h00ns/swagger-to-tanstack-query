@@ -14,7 +14,7 @@ const baseConfig: ResolvedConfig = {
   output: "out",
   outputDir: "/out",
   client: { path: "@/lib/axios", name: "axiosInstance" },
-  response: { dataField: "data" },
+  response: { dataField: "data", envelope: null },
   error: null,
   format: false,
 };
@@ -24,8 +24,22 @@ const withError: ResolvedConfig = {
   error: { path: "@/lib/axios", name: "ApiError" },
 };
 
+const withEnvelope: ResolvedConfig = {
+  ...baseConfig,
+  response: { dataField: "data", envelope: { path: "@/lib/axios", name: "CommonResponse" } },
+};
+
 function parse(config: ResolvedConfig = baseConfig) {
-  return parseSpec(sampleSpec, { dataField: config.response.dataField });
+  return parseSpec(sampleSpec, {
+    dataField: config.response.dataField,
+    envelopeName: config.response.envelope?.name ?? null,
+  });
+}
+
+function controllerWith(config: ResolvedConfig, dirName: string): ControllerIR {
+  const c = parse(config).controllers.find((x) => x.dirName === dirName);
+  if (!c) throw new Error(`controller ${dirName} not found`);
+  return c;
 }
 
 function controller(dirName: string): ControllerIR {
@@ -125,6 +139,32 @@ describe("mutations.ts", () => {
   it("uses the configured error type, else DefaultError", () => {
     expect(generateMutations(controller("user"), baseConfig)).toContain("DefaultError");
     expect(generateMutations(controller("user"), withError)).toContain("AxiosError<ApiError>");
+  });
+});
+
+describe("generic response envelope", () => {
+  it("uses Envelope<Inner> and imports the generic type", () => {
+    const apis = generateApis(controllerWith(withEnvelope, "user"), withEnvelope);
+    expect(apis).toContain('import type { CommonResponse } from "@/lib/axios";');
+    expect(apis).toContain("client.get<CommonResponse<User>>(`/users/${id}`");
+    expect(apis).toContain(".then((res) => res.data.data)");
+  });
+
+  it("does not generate per-endpoint envelope interfaces", () => {
+    const types = controllerWith(withEnvelope, "user").types.map((t) => t.name);
+    expect(types).toContain("User");
+    expect(types).not.toContain("CommonResponseUser");
+    expect(types).not.toContain("CommonResponseUsers");
+  });
+
+  it("wraps array payloads", () => {
+    const apis = generateApis(controllerWith(withEnvelope, "user"), withEnvelope);
+    expect(apis).toContain("client.get<CommonResponse<Array<User>>>(`/users`");
+  });
+
+  it("without envelope config, named envelope interfaces are still generated", () => {
+    const types = controllerWith(baseConfig, "user").types.map((t) => t.name);
+    expect(types).toContain("CommonResponseUser");
   });
 });
 

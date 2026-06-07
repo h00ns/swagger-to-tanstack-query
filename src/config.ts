@@ -10,6 +10,13 @@ export interface ClientConfig {
   name?: string;
 }
 
+export interface EnvelopeConfig {
+  /** Import path of your generic envelope type, e.g. `CommonResponse<T>`. */
+  path: string;
+  /** Named export of the envelope type. Omit (or "default") for a default import. */
+  name?: string;
+}
+
 export interface ResponseConfig {
   /**
    * Unwrap this field from the common response envelope so generated apis return
@@ -17,6 +24,12 @@ export interface ResponseConfig {
    * whose success schema actually has the field. Omit to keep the full envelope.
    */
   dataField?: string;
+  /**
+   * A generic envelope type to use instead of generating one `CommonResponseX`
+   * interface per endpoint. Responses become `Envelope<Inner>` and the per-endpoint
+   * envelope interfaces are no longer emitted. Requires `dataField`.
+   */
+  envelope?: EnvelopeConfig;
 }
 
 export interface ErrorConfig {
@@ -24,6 +37,11 @@ export interface ErrorConfig {
   path: string;
   /** Named export of the error type. Omit (or "default") for a default import. */
   name?: string;
+}
+
+/** Local identifier used for the envelope import (default exports get a name). */
+export function envelopeLocalName(env: { name: string }): string {
+  return env.name === "default" ? "CommonResponse" : env.name;
 }
 
 export interface UserConfig {
@@ -47,7 +65,10 @@ export interface ResolvedConfig {
   /** Absolute output path. */
   outputDir: string;
   client: Required<ClientConfig>;
-  response: { dataField: string | null };
+  response: {
+    dataField: string | null;
+    envelope: Required<EnvelopeConfig> | null;
+  };
   error: Required<ErrorConfig> | null;
   format: boolean;
 }
@@ -97,6 +118,15 @@ export async function loadConfig(cwd: string): Promise<ResolvedConfig> {
   if (parsed.error && typeof parsed.error.path !== "string") {
     fail(`"error.path" must be a string (path to your error type module).`);
   }
+  const envelope = parsed.response?.envelope;
+  if (envelope) {
+    if (typeof envelope.path !== "string") {
+      fail(`"response.envelope.path" must be a string (path to your generic envelope type).`);
+    }
+    if (!parsed.response?.dataField) {
+      fail(`"response.dataField" is required when "response.envelope" is set.`);
+    }
+  }
 
   return {
     url: parsed.url,
@@ -108,6 +138,9 @@ export async function loadConfig(cwd: string): Promise<ResolvedConfig> {
     },
     response: {
       dataField: parsed.response?.dataField ?? null,
+      envelope: envelope
+        ? { path: envelope.path, name: envelope.name ?? "default" }
+        : null,
     },
     error: parsed.error
       ? { path: parsed.error.path, name: parsed.error.name ?? "default" }

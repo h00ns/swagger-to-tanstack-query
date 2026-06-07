@@ -132,8 +132,21 @@ export function generateApis(controller: ControllerIR, config: ResolvedConfig): 
   const typeBlob = controller.operations.map(apiTypeBlob).join(" ");
   const typeNames = importsForBlob(controller, typeBlob);
   const typeImport = typeNames.length ? `import type { ${typeNames.join(", ")} } from "./types";\n` : "";
+  const envelopeImport = envelopeImportFor(controller, config);
 
-  return `${HEADER}${clientImport}\n${typeImport}\n${fns}\n`;
+  return `${HEADER}${clientImport}\n${envelopeImport}${typeImport}\n${fns}\n`;
+}
+
+/** Import the generic envelope type when this controller's responses use it. */
+function envelopeImportFor(controller: ControllerIR, config: ResolvedConfig): string {
+  const env = config.response.envelope;
+  if (!env) return "";
+  const local = env.name === "default" ? "CommonResponse" : env.name;
+  const used = controller.operations.some((op) => op.responseType.includes(`${local}<`));
+  if (!used) return "";
+  return env.name === "default"
+    ? `import type ${local} from "${env.path}";\n`
+    : `import type { ${local} } from "${env.path}";\n`;
 }
 
 /** Every TS type referenced in an operation's api signature. */

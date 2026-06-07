@@ -50,10 +50,13 @@ interface SchemaRegistryEntry {
 export interface ParseOptions {
   /** Unwrap this envelope field as the payload (see ResponseConfig.dataField). */
   dataField?: string | null;
+  /** Local name of the generic envelope type, e.g. `CommonResponse`. */
+  envelopeName?: string | null;
 }
 
 export function parseSpec(doc: AnyObj, options: ParseOptions = {}): ParsedSpec {
   const dataField = options.dataField ?? null;
+  const envelopeName = options.envelopeName ?? null;
   const isV2 = typeof doc.swagger === "string" && doc.swagger.startsWith("2");
   const schemasRoot: Record<string, SchemaObject> = isV2
     ? (doc.definitions ?? {})
@@ -94,6 +97,7 @@ export function parseSpec(doc: AnyObj, options: ParseOptions = {}): ParsedSpec {
         isV2,
         ctx,
         dataField,
+        envelopeName,
       });
       for (const controller of opControllers) controller.operations.push(operation);
     }
@@ -144,10 +148,12 @@ interface BuildArgs {
   isV2: boolean;
   ctx: { onRef: (name: string) => void };
   dataField: string | null;
+  envelopeName: string | null;
 }
 
 function buildOperation(args: BuildArgs): OperationIR {
-  const { doc, op, path, method, sharedParams, controller, isV2, ctx, dataField } = args;
+  const { doc, op, path, method, sharedParams, controller, isV2, ctx, dataField, envelopeName } =
+    args;
 
   const rawParams = [...sharedParams, ...(op.parameters ?? [])].map((p) => deref(doc, p) ?? p);
 
@@ -185,7 +191,14 @@ function buildOperation(args: BuildArgs): OperationIR {
     multipart = multipart || isMultipart;
   }
 
-  const { type: responseType, unwrap } = resolveResponseType(doc, op, isV2, ctx, dataField);
+  const { type: responseType, unwrap } = resolveResponseType(
+    doc,
+    op,
+    isV2,
+    ctx,
+    dataField,
+    envelopeName,
+  );
 
   const name = uniqueOperationName(op, method, path, controller);
   const kind = method === "get" || method === "head" ? "query" : "mutation";
@@ -236,6 +249,7 @@ function resolveResponseType(
   isV2: boolean,
   ctx: { onRef: (name: string) => void },
   dataField: string | null,
+  envelopeName: string | null,
 ): { type: string; unwrap: boolean } {
   const responses: AnyObj = op.responses ?? {};
   const successKey =
@@ -250,15 +264,18 @@ function resolveResponseType(
   const schema = isV2 ? res.schema : pickJsonSchema(res.content);
   if (!schema) return { type: "void", unwrap: false };
 
-  const type = schemaToTs(schema, ctx);
-  const unwrap = dataField ? schemaHasProperty(doc, schema, dataField) : false;
-  return { type, unwrap };
-}
+  const resolved = (schema.$ref ? resolveRef(doc, schema.$ref) : schema) as SchemaObject | undefined;
+  const dataSchema =
+    dataField && resolved?.properties ? resolved.properties[dataField] : undefined;
 
-/** Whether a (possibly `$ref`'d) schema declares the given property. */
-function schemaHasProperty(doc: AnyObj, schema: SchemaObject, field: string): boolean {
-  const resolved = schema.$ref ? (resolveRef(doc, schema.$ref) as SchemaObject | undefined) : schema;
-  return !!resolved?.properties && field in resolved.properties;
+  // Generic envelope: emit `Envelope<Inner>` and don't generate the named
+  // envelope interface (only the inner type's refs are recorded).
+  if (envelopeName && dataSchema) {
+    return { type: `${envelopeName}<${schemaToTs(dataSchema, ctx)}>`, unwrap: true };
+  }
+
+  const type = schemaToTs(schema, ctx);
+  return { type, unwrap: !!dataSchema };
 }
 
 function uniqueOperationName(
