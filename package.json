@@ -33,6 +33,18 @@
     "axios"
   ],
   "license": "MIT",
+  "author": "h00ns",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/h00ns/swagger-to-tanstack-query.git"
+  },
+  "homepage": "https://github.com/h00ns/swagger-to-tanstack-query#readme",
+  "bugs": {
+    "url": "https://github.com/h00ns/swagger-to-tanstack-query/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@apidevtools/swagger-parser": "^10.1.1",
     "prettier": "^3.4.2"
