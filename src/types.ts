@@ -24,10 +24,15 @@ export interface OperationIR {
   /** Raw path with `{braces}`, e.g. `/users/{id}`. */
   path: string;
   summary?: string;
+  /** Marks the operation `@deprecated` in JSDoc. */
+  deprecated: boolean;
   pathParams: ParamIR[];
   queryParams: ParamIR[];
+  headerParams: ParamIR[];
   /** TS type of the request body, or null when there is none. */
   requestBodyType: string | null;
+  /** When true, the request body is `multipart/form-data` (sent as FormData). */
+  requestBodyMultipart: boolean;
   /** TS type of the success response (the full envelope), defaults to `void`. */
   responseType: string;
   /** When true, apis return `res.data.<dataField>` instead of `res.data`. */

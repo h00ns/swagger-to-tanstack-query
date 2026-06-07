@@ -85,6 +85,10 @@ export function schemaToTs(schema: SchemaObject | undefined, ctx: Ctx): string {
 
   switch (type) {
     case "string":
+      // binary string == file upload field
+      if (schema.format === "binary" || schema.format === "byte") {
+        return withNullable(schema.format === "binary" ? "Blob" : "string", schema);
+      }
       return withNullable("string", schema);
     case "integer":
     case "number":

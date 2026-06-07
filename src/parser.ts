@@ -12,7 +12,7 @@ import {
   type SchemaObject,
 } from "./schema-to-ts.js";
 import { schemaToTs } from "./schema-to-ts.js";
-import { camelCase, kebabCase, pascalCase, safeIdentifier } from "./utils.js";
+import { camelCase, escapeReserved, kebabCase, pascalCase, safeIdentifier } from "./utils.js";
 
 const METHODS: HttpMethod[] = ["get", "post", "put", "patch", "delete", "head", "options"];
 
@@ -78,10 +78,11 @@ export function parseSpec(doc: AnyObj, options: ParseOptions = {}): ParsedSpec {
       const op: AnyObj | undefined = pathItem[method];
       if (!op || typeof op !== "object") continue;
 
-      const tag: string = op.tags?.[0] ?? "default";
-      const controller = ensureController(controllers, tag);
-      const refSink = ensureNameSet(usedNamesPerController, tag);
-      const ctx = { onRef: (name: string) => refSink.add(name) };
+      // An operation belongs to every tag it lists (Swagger UI shows it under each).
+      const tags: string[] = op.tags?.length ? op.tags : ["default"];
+      const opControllers = tags.map((t) => ensureController(controllers, t));
+      const sinks = tags.map((t) => ensureNameSet(usedNamesPerController, t));
+      const ctx = { onRef: (name: string) => sinks.forEach((s) => s.add(name)) };
 
       const operation = buildOperation({
         doc,
@@ -89,12 +90,12 @@ export function parseSpec(doc: AnyObj, options: ParseOptions = {}): ParsedSpec {
         path,
         method,
         sharedParams,
-        controller,
+        controller: opControllers[0],
         isV2,
         ctx,
         dataField,
       });
-      controller.operations.push(operation);
+      for (const controller of opControllers) controller.operations.push(operation);
     }
   }
 
@@ -152,10 +153,12 @@ function buildOperation(args: BuildArgs): OperationIR {
 
   const pathParams: ParamIR[] = [];
   const queryParams: ParamIR[] = [];
+  const headerParams: ParamIR[] = [];
   let bodyType: string | null = null;
+  let multipart = false;
 
   for (const p of rawParams) {
-    if (p.in === "path" || p.in === "query") {
+    if (p.in === "path" || p.in === "query" || p.in === "header") {
       const schema: SchemaObject = p.schema ?? p; // v2 keeps type on the param itself
       const param: ParamIR = {
         name: p.name,
@@ -164,17 +167,22 @@ function buildOperation(args: BuildArgs): OperationIR {
         required: p.in === "path" ? true : !!p.required,
         tsType: schemaToTs(schema, ctx),
       };
-      (p.in === "path" ? pathParams : queryParams).push(param);
+      if (p.in === "path") pathParams.push(param);
+      else if (p.in === "query") queryParams.push(param);
+      else headerParams.push(param);
     } else if (isV2 && p.in === "body") {
       bodyType = schemaToTs(p.schema, ctx);
+    } else if (isV2 && p.in === "formData") {
+      multipart = true;
     }
   }
 
   // OpenAPI 3 request body
   if (!isV2 && op.requestBody) {
     const rb = deref(doc, op.requestBody);
-    const schema = pickJsonSchema(rb?.content);
+    const { schema, multipart: isMultipart } = pickRequestSchema(rb?.content);
     if (schema) bodyType = schemaToTs(schema, ctx);
+    multipart = multipart || isMultipart;
   }
 
   const { type: responseType, unwrap } = resolveResponseType(doc, op, isV2, ctx, dataField);
@@ -187,9 +195,12 @@ function buildOperation(args: BuildArgs): OperationIR {
     method,
     path,
     summary: op.summary,
+    deprecated: !!op.deprecated,
     pathParams,
     queryParams,
+    headerParams,
     requestBodyType: bodyType,
+    requestBodyMultipart: multipart && !!bodyType,
     responseType,
     responseUnwrap: unwrap,
     kind,
@@ -203,6 +214,20 @@ function pickJsonSchema(content: AnyObj | undefined): SchemaObject | undefined {
     content["application/*+json"] ??
     content[Object.keys(content)[0]];
   return json?.schema;
+}
+
+/** Pick the request schema and report whether it's multipart/form-data. */
+function pickRequestSchema(content: AnyObj | undefined): {
+  schema: SchemaObject | undefined;
+  multipart: boolean;
+} {
+  if (!content) return { schema: undefined, multipart: false };
+  const json = content["application/json"] ?? content["application/*+json"];
+  if (json?.schema) return { schema: json.schema, multipart: false };
+  const multipart = content["multipart/form-data"] ?? content["application/x-www-form-urlencoded"];
+  if (multipart?.schema) return { schema: multipart.schema, multipart: true };
+  const first = content[Object.keys(content)[0]];
+  return { schema: first?.schema, multipart: false };
 }
 
 function resolveResponseType(
@@ -244,10 +269,10 @@ function uniqueOperationName(
 ): string {
   let base: string;
   if (typeof op.operationId === "string" && op.operationId.trim()) {
-    base = camelCase(op.operationId);
+    base = escapeReserved(camelCase(op.operationId));
   } else {
     const segs = path.split("/").filter(Boolean).map((s) => s.replace(/[{}]/g, ""));
-    base = camelCase([method, ...segs].join(" "));
+    base = escapeReserved(camelCase([method, ...segs].join(" ")));
   }
   const existing = new Set(controller.operations.map((o) => o.name));
   if (!existing.has(base)) return base;

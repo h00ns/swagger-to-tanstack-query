@@ -35,10 +35,31 @@ export function pascalCase(input: string): string {
     .join("");
 }
 
-/** Turn any string into a safe JS identifier (used for param names). */
+/** JS/TS keywords that cannot be used as identifiers in value position. */
+const RESERVED = new Set([
+  "break", "case", "catch", "class", "const", "continue", "debugger", "default",
+  "delete", "do", "else", "enum", "export", "extends", "false", "finally", "for",
+  "function", "if", "import", "in", "instanceof", "new", "null", "return", "super",
+  "switch", "this", "throw", "true", "try", "typeof", "var", "void", "while", "with",
+  "let", "static", "yield", "await", "async", "implements", "interface", "package",
+  "private", "protected", "public",
+]);
+
+/** Append `_` to reserved words so they're valid identifiers. */
+export function escapeReserved(name: string): string {
+  return RESERVED.has(name) ? `${name}_` : name;
+}
+
+/** Turn any string into a safe JS identifier (used for path params, fn names). */
 export function safeIdentifier(input: string): string {
   const c = camelCase(input);
-  return /^[0-9]/.test(c) ? `_${c}` : c || "_";
+  const safe = /^[0-9]/.test(c) ? `_${c}` : c || "_";
+  return escapeReserved(safe);
+}
+
+/** A valid TS object-property key: bare when possible, otherwise quoted. */
+export function propertyKey(name: string): string {
+  return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name) ? name : JSON.stringify(name);
 }
 
 /** Indent every line of a block by `n` levels of two spaces. */
