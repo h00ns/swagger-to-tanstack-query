@@ -28,8 +28,10 @@ export interface OperationIR {
   queryParams: ParamIR[];
   /** TS type of the request body, or null when there is none. */
   requestBodyType: string | null;
-  /** TS type of the success response, defaults to `void`/`unknown`. */
+  /** TS type of the success response (the full envelope), defaults to `void`. */
   responseType: string;
+  /** When true, apis return `res.data.<dataField>` instead of `res.data`. */
+  responseUnwrap: boolean;
   /** GET/HEAD -> query, everything else -> mutation. */
   kind: "query" | "mutation";
 }

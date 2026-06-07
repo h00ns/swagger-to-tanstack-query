@@ -10,6 +10,22 @@ export interface ClientConfig {
   name?: string;
 }
 
+export interface ResponseConfig {
+  /**
+   * Unwrap this field from the common response envelope so generated apis return
+   * the inner payload (e.g. `data` → `res.data.data`). Only applied to operations
+   * whose success schema actually has the field. Omit to keep the full envelope.
+   */
+  dataField?: string;
+}
+
+export interface ErrorConfig {
+  /** Import path of your error-body type. */
+  path: string;
+  /** Named export of the error type. Omit (or "default") for a default import. */
+  name?: string;
+}
+
 export interface UserConfig {
   /** Swagger/OpenAPI document URL (or local file path). */
   url: string;
@@ -17,14 +33,23 @@ export interface UserConfig {
   output: string;
   /** User-provided axios instance. */
   client: ClientConfig;
+  /** Common success-envelope handling. */
+  response?: ResponseConfig;
+  /** Common error type, applied as `AxiosError<T>` to query/mutation hooks. */
+  error?: ErrorConfig;
   /** Run Prettier over generated files. Default: true. */
   format?: boolean;
 }
 
-export interface ResolvedConfig extends Required<Omit<UserConfig, "client">> {
-  client: Required<ClientConfig>;
+export interface ResolvedConfig {
+  url: string;
+  output: string;
   /** Absolute output path. */
   outputDir: string;
+  client: Required<ClientConfig>;
+  response: { dataField: string | null };
+  error: Required<ErrorConfig> | null;
+  format: boolean;
 }
 
 function fail(message: string): never {
@@ -69,6 +94,9 @@ export async function loadConfig(cwd: string): Promise<ResolvedConfig> {
   if (!parsed.client || typeof parsed.client.path !== "string") {
     fail(`"client.path" is required (path to your axios instance module).`);
   }
+  if (parsed.error && typeof parsed.error.path !== "string") {
+    fail(`"error.path" must be a string (path to your error type module).`);
+  }
 
   return {
     url: parsed.url,
@@ -78,6 +106,12 @@ export async function loadConfig(cwd: string): Promise<ResolvedConfig> {
       path: parsed.client.path,
       name: parsed.client.name ?? "default",
     },
+    response: {
+      dataField: parsed.response?.dataField ?? null,
+    },
+    error: parsed.error
+      ? { path: parsed.error.path, name: parsed.error.name ?? "default" }
+      : null,
     format: parsed.format ?? true,
   };
 }

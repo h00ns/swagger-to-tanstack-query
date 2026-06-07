@@ -47,7 +47,13 @@ interface SchemaRegistryEntry {
   schema: SchemaObject;
 }
 
-export function parseSpec(doc: AnyObj): ParsedSpec {
+export interface ParseOptions {
+  /** Unwrap this envelope field as the payload (see ResponseConfig.dataField). */
+  dataField?: string | null;
+}
+
+export function parseSpec(doc: AnyObj, options: ParseOptions = {}): ParsedSpec {
+  const dataField = options.dataField ?? null;
   const isV2 = typeof doc.swagger === "string" && doc.swagger.startsWith("2");
   const schemasRoot: Record<string, SchemaObject> = isV2
     ? (doc.definitions ?? {})
@@ -86,6 +92,7 @@ export function parseSpec(doc: AnyObj): ParsedSpec {
         controller,
         isV2,
         ctx,
+        dataField,
       });
       controller.operations.push(operation);
     }
@@ -135,10 +142,11 @@ interface BuildArgs {
   controller: ControllerIR;
   isV2: boolean;
   ctx: { onRef: (name: string) => void };
+  dataField: string | null;
 }
 
 function buildOperation(args: BuildArgs): OperationIR {
-  const { doc, op, path, method, sharedParams, controller, isV2, ctx } = args;
+  const { doc, op, path, method, sharedParams, controller, isV2, ctx, dataField } = args;
 
   const rawParams = [...sharedParams, ...(op.parameters ?? [])].map((p) => deref(doc, p) ?? p);
 
@@ -169,7 +177,7 @@ function buildOperation(args: BuildArgs): OperationIR {
     if (schema) bodyType = schemaToTs(schema, ctx);
   }
 
-  const responseType = resolveResponseType(doc, op, isV2, ctx);
+  const { type: responseType, unwrap } = resolveResponseType(doc, op, isV2, ctx, dataField);
 
   const name = uniqueOperationName(op, method, path, controller);
   const kind = method === "get" || method === "head" ? "query" : "mutation";
@@ -183,6 +191,7 @@ function buildOperation(args: BuildArgs): OperationIR {
     queryParams,
     requestBodyType: bodyType,
     responseType,
+    responseUnwrap: unwrap,
     kind,
   };
 }
@@ -201,20 +210,30 @@ function resolveResponseType(
   op: AnyObj,
   isV2: boolean,
   ctx: { onRef: (name: string) => void },
-): string {
+  dataField: string | null,
+): { type: string; unwrap: boolean } {
   const responses: AnyObj = op.responses ?? {};
   const successKey =
     Object.keys(responses).find((k) => /^2\d\d$/.test(k)) ??
     (responses["2XX"] ? "2XX" : undefined) ??
     (responses.default ? "default" : undefined);
-  if (!successKey) return "void";
+  if (!successKey) return { type: "void", unwrap: false };
 
   const res = deref(doc, responses[successKey]);
-  if (!res) return "void";
+  if (!res) return { type: "void", unwrap: false };
 
   const schema = isV2 ? res.schema : pickJsonSchema(res.content);
-  if (!schema) return "void";
-  return schemaToTs(schema, ctx);
+  if (!schema) return { type: "void", unwrap: false };
+
+  const type = schemaToTs(schema, ctx);
+  const unwrap = dataField ? schemaHasProperty(doc, schema, dataField) : false;
+  return { type, unwrap };
+}
+
+/** Whether a (possibly `$ref`'d) schema declares the given property. */
+function schemaHasProperty(doc: AnyObj, schema: SchemaObject, field: string): boolean {
+  const resolved = schema.$ref ? (resolveRef(doc, schema.$ref) as SchemaObject | undefined) : schema;
+  return !!resolved?.properties && field in resolved.properties;
 }
 
 function uniqueOperationName(

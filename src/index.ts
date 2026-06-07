@@ -9,7 +9,7 @@ export type { ParsedSpec, ControllerIR, OperationIR } from "./types.js";
 /** Run the full pipeline using an already-resolved config. */
 export async function generate(config: ResolvedConfig): Promise<WriteResult> {
   const doc = await fetchSpec(config.url);
-  const spec = parseSpec(doc);
+  const spec = parseSpec(doc, { dataField: config.response.dataField });
   return writeOutput(spec, config);
 }
 

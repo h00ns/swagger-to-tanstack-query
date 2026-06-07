@@ -155,18 +155,98 @@ you run the command (your project root).
     "name": "axiosInstance"
   },
 
+  // Common success-envelope handling (optional).
+  "response": {
+    // Unwrap this field so apis return the inner payload (res.data.data).
+    "dataField": "data"
+  },
+
+  // Common error type, applied as AxiosError<T> to hooks (optional).
+  "error": {
+    "path": "@/lib/axios",
+    "name": "ApiError"
+  },
+
   // Run Prettier over generated files. Default: true.
   "format": true
 }
 ```
 
-| Field         | Type      | Required | Default     | Description                                                                 |
-| ------------- | --------- | :------: | ----------- | --------------------------------------------------------------------------- |
-| `url`         | `string`  |    ✅    | —           | Swagger/OpenAPI document URL or local path. Swagger 2.0 & OpenAPI 3.x.      |
-| `output`      | `string`  |    ✅    | —           | Output directory (relative to cwd). **Wiped & regenerated every run.**      |
-| `client.path` | `string`  |    ✅    | —           | Import path of your axios instance module.                                  |
-| `client.name` | `string`  |    –     | `"default"` | Named export to import. Omit for a default export.                          |
-| `format`      | `boolean` |    –     | `true`      | Format output with Prettier.                                                |
+| Field                  | Type      | Required | Default     | Description                                                                 |
+| ---------------------- | --------- | :------: | ----------- | --------------------------------------------------------------------------- |
+| `url`                  | `string`  |    ✅    | —           | Swagger/OpenAPI document URL or local path. Swagger 2.0 & OpenAPI 3.x.      |
+| `output`               | `string`  |    ✅    | —           | Output directory (relative to cwd). **Wiped & regenerated every run.**      |
+| `client.path`          | `string`  |    ✅    | —           | Import path of your axios instance module.                                  |
+| `client.name`          | `string`  |    –     | `"default"` | Named export to import. Omit for a default export.                          |
+| `response.dataField`   | `string`  |    –     | _(off)_     | Unwrap this envelope field as the payload. See [Common response envelope](#common-response-envelope). |
+| `error.path`           | `string`  |    –     | —           | Import path of your error-body type. See [Common error type](#common-error-type). |
+| `error.name`           | `string`  |    –     | `"default"` | Named export of the error type. Omit for a default export.                  |
+| `format`               | `boolean` |    –     | `true`      | Format output with Prettier.                                                |
+
+### Common response envelope
+
+Most APIs wrap every response in a shared envelope:
+
+```jsonc
+// CommonResponseDetail
+{ "result": true, "data": { /* the real payload */ }, "message": "OK", "errorCode": null }
+```
+
+Set `response.dataField` to the payload field and generated apis unwrap it, so
+your hooks return the **inner payload** instead of the envelope:
+
+```jsonc
+"response": { "dataField": "data" }
+```
+
+```ts
+// before  →  client.get<CommonResponseDetail>(url).then((res) => res.data);
+// after   →  client.get<CommonResponseDetail>(url).then((res) => res.data.data);
+```
+
+```ts
+const { data } = useQuery(contactQueries.getContact(1));
+//      ^? Detail | undefined          (not CommonResponseDetail)
+```
+
+- Only applied to operations whose success schema **actually has** the field —
+  others (e.g. `void` deletes) are left untouched.
+- The axios generic still uses the full envelope type, so unwrapping is type-safe.
+
+### Common error type
+
+axios always throws an `AxiosError`. Point `error` at your error-body type and
+every hook's `error` becomes `AxiosError<YourType>`:
+
+```jsonc
+"error": { "path": "@/lib/axios", "name": "ApiError" }
+```
+
+```ts
+// @/lib/axios.ts
+export interface ApiError {
+  result: false;
+  message: string;
+  errorCode: string | null;
+}
+```
+
+```ts
+const { error } = useQuery(contactQueries.getContact(1));
+//      ^? AxiosError<ApiError> | null
+//         error.response?.data.errorCode  ✅ typed
+
+const create = useCreateContact({
+  onError: (err) => {
+    //        ^? AxiosError<ApiError>
+    console.log(err.response?.data.message);
+  },
+});
+```
+
+The type is applied explicitly per hook — `queryOptions<TData, AxiosError<ApiError>>`
+for queries and `UseMutationOptions<TData, AxiosError<ApiError>, TVars>` for
+mutations. When `error` is omitted, hooks fall back to TanStack's `DefaultError`.
 
 ### `client.name` behavior
 
@@ -560,15 +640,16 @@ No — axios is fixed by design. But the instance is yours, so you control
 baseURL, headers, interceptors, retries, etc.
 
 **Why is the response type wrapped (e.g. `CommonResponseDetail`)?**
-That's your API's response envelope from the spec. The generator faithfully
-mirrors the schema; access your payload via `data.data`.
+That's your API's response envelope from the spec. Set
+[`response.dataField`](#common-response-envelope) to unwrap it and have hooks
+return the inner payload directly.
 
 **How are shared models handled?**
 They are duplicated into each controller's `types.ts` (see design decisions).
 
 **Does it support error types?**
-Not yet. Errors default to TanStack's behavior. A global `defaultError`
-(via `Register` augmentation) is on the roadmap.
+Yes — set [`error`](#common-error-type) to type every hook's `error` as
+`AxiosError<YourType>`. Without it, hooks use TanStack's `DefaultError`.
 
 **Swagger 2.0?**
 Yes — `definitions`, `in: "body"` parameters, and `responses[code].schema` are

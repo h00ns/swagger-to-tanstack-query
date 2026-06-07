@@ -33,8 +33,8 @@ export async function writeOutput(
     const files: Record<string, string> = {
       "types.ts": generateTypes(controller),
       "apis.ts": generateApis(controller, config),
-      "queries.ts": generateQueries(controller),
-      "mutations.ts": generateMutations(controller),
+      "queries.ts": generateQueries(controller, config),
+      "mutations.ts": generateMutations(controller, config),
       "index.ts": generateIndex(),
     };
 
