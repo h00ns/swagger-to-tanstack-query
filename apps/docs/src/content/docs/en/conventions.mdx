@@ -1,0 +1,26 @@
+---
+title: Conventions & Design Decisions
+description: The conventions and trade-offs baked into the generated code.
+group: Reference
+order: 120
+---
+
+The generator follows a fixed set of conventions so the output is predictable.
+These are the decisions and the trade-offs behind them.
+
+## Conventions
+
+- **`GET`/`HEAD` are queries; everything else is a mutation.**
+- **Single object argument:** every api/query/mutation takes one object with keys
+  `{ ...pathParams, body, params, headers }` — order-independent and safe with
+  multiple path params. Functions with no inputs take no argument.
+- **`params`/`headers` objects are optional** only when every contained parameter is optional.
+- **Responses** use the first `2xx` response's `application/json` schema (falls back to `default`, then `void`).
+- **Multi-tag operations** are emitted into **every** controller they're tagged with (matching how Swagger UI groups them).
+- **Per-controller, self-contained types.** A schema referenced by two controllers is generated in **both** `types.ts` files — keeps each folder independent, at the cost of some duplication.
+- **The output directory is wiped on every run** so deletions in the spec propagate. Never hand-edit generated files — they carry an `AUTO-GENERATED` header.
+
+## Related
+
+- [Naming Rules](/docs/naming-rules) — how names are derived.
+- [Limitations & Roadmap](/docs/limitations) — what is not yet supported.

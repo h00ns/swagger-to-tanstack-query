@@ -1,0 +1,107 @@
+/*
+ * Design tokens — single source of truth, from DESIGN.md §2.
+ * Dark is the primary mode (:root is dark). oklch authoring + hex reference.
+ */
+@theme {
+  /* ---- Fonts ---- */
+  --font-display: "Space Grotesk Variable", "Clash Display", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* ---- Backgrounds & surfaces (graphite ramp, hue 255) ---- */
+  --color-bg: oklch(0.17 0.012 255); /* #0B0E14 */
+  --color-bg-subtle: oklch(0.2 0.014 255); /* #11151D */
+  --color-surface: oklch(0.23 0.016 255); /* #161B26 */
+  --color-surface-raised: oklch(0.27 0.018 255); /* #1E2530 */
+  --color-surface-inset: oklch(0.15 0.012 255); /* #080B11 */
+
+  /* ---- Borders ---- */
+  --color-border: oklch(0.32 0.018 255); /* #2A3140 */
+  --color-border-strong: oklch(0.4 0.02 255); /* #3A4254 */
+  --color-border-muted: oklch(0.26 0.015 255); /* #1C222D */
+
+  /* ---- Text ---- */
+  --color-text: oklch(0.96 0.004 255); /* #EDF0F5 */
+  --color-text-muted: oklch(0.74 0.012 255); /* #A3ACBD */
+  --color-text-faint: oklch(0.58 0.012 255); /* #6B7488 */
+  --color-text-on-primary: oklch(0.17 0.012 255); /* #0B0E14 */
+
+  /* ---- Brand ---- */
+  --color-primary: oklch(0.82 0.15 200); /* #36D7E3 */
+  --color-primary-hover: oklch(0.87 0.14 200); /* #5FE6EF */
+  --color-primary-press: oklch(0.75 0.15 200); /* #1FC3D0 */
+  --color-primary-soft: oklch(0.82 0.15 200 / 0.12);
+  --color-accent: oklch(0.68 0.2 295); /* #9B6BFF */
+  --color-accent-soft: oklch(0.68 0.2 295 / 0.14);
+
+  /* ---- Status ---- */
+  --color-success: oklch(0.8 0.17 155); /* #38E59B */
+  --color-warn: oklch(0.83 0.15 85); /* #F2C14E */
+  --color-danger: oklch(0.68 0.2 25); /* #FF6B5E */
+  --color-success-soft: oklch(0.8 0.17 155 / 0.13);
+  --color-warn-soft: oklch(0.83 0.15 85 / 0.13);
+  --color-danger-soft: oklch(0.68 0.2 25 / 0.14);
+
+  /* ---- Radii ---- */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-2xl: 28px;
+
+  /* ---- Easings (exposed as Tailwind ease-* utilities) ---- */
+  --ease-out-quad: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-smooth: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* Non-utility tokens: glow, elevation, motion, z-layers, layout widths. */
+:root {
+  /* Neon / glow (box-shadow / drop-shadow only — never text fill) */
+  --glow-primary: 0 0 24px oklch(0.82 0.15 200 / 0.45), 0 0 2px oklch(0.82 0.15 200 / 0.7);
+  --glow-primary-sm: 0 0 12px oklch(0.82 0.15 200 / 0.4);
+  --glow-primary-lg: 0 0 48px oklch(0.82 0.15 200 / 0.35), 0 0 4px oklch(0.82 0.15 200 / 0.6);
+  --glow-accent: 0 0 24px oklch(0.68 0.2 295 / 0.45), 0 0 2px oklch(0.68 0.2 295 / 0.7);
+  --glow-success: 0 0 16px oklch(0.8 0.17 155 / 0.4);
+  --glow-danger: 0 0 16px oklch(0.68 0.2 25 / 0.45);
+  --glow-ambient-cyan: radial-gradient(closest-side, oklch(0.82 0.15 200 / 0.28), transparent);
+  --glow-ambient-violet: radial-gradient(closest-side, oklch(0.68 0.2 295 / 0.22), transparent);
+
+  /* Elevation */
+  --shadow-1: 0 1px 2px oklch(0 0 0 / 0.4);
+  --shadow-2: 0 4px 12px oklch(0 0 0 / 0.45);
+  --shadow-3: 0 12px 32px oklch(0 0 0 / 0.5);
+  --shadow-4: 0 24px 64px oklch(0 0 0 / 0.55);
+
+  /* Motion durations */
+  --dur-1: 80ms;
+  --dur-2: 140ms;
+  --dur-3: 220ms;
+  --dur-4: 360ms;
+  --dur-5: 560ms;
+  --dur-6: 840ms;
+  --dur-morph: 1100ms;
+
+  /* Z-index layers */
+  --z-base: 0;
+  --z-raised: 10;
+  --z-sticky: 20;
+  --z-header: 30;
+  --z-drawer: 40;
+  --z-overlay: 50;
+  --z-modal: 60;
+  --z-popover: 70;
+  --z-toast: 80;
+  --z-tooltip: 90;
+
+  /* Layout */
+  --container-max: 1280px;
+  --container-prose: 768px;
+  --sidebar-w: 268px;
+  --toc-w: 240px;
+  --header-h: 60px;
+
+  /* Code line highlight */
+  --code-line-highlight-bg: oklch(0.82 0.15 200 / 0.08);
+}

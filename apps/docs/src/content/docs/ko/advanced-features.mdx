@@ -1,0 +1,64 @@
+---
+title: 고급 기능
+description: 헤더 파라미터, 파일 업로드, 식별자가 아닌 파라미터 이름.
+group: 사용법
+order: 100
+---
+
+생성기는 단순한 path 파라미터와 body를 넘어, 헤더 파라미터, `multipart/form-data`
+파일 업로드, 그리고 wire 이름이 유효한 TypeScript 식별자가 아닌 query/header
+파라미터까지 처리합니다.
+
+## 헤더 파라미터
+
+`in: header` 파라미터는 `headers` 객체 인자가 되며, axios 요청 config를 통해
+전달됩니다. 실제 헤더 이름은 그대로 보존됩니다.
+
+```ts
+// GET /users/{id} with a required X-Trace-Id header
+export const getUser = ({ id, headers }: { id: number; headers: { "X-Trace-Id": string } }) =>
+  client.get<User>(`/users/${id}`, { headers }).then((res) => res.data);
+```
+
+```ts
+useQuery(userQueries.getUser({ id: 1, headers: { "X-Trace-Id": traceId } }));
+```
+
+> axios interceptor가 처리하는 인증 헤더는 여기에 나타나지 않습니다. 스펙에 명시적으로
+> 선언된 헤더 파라미터만 표시됩니다.
+
+## 파일 업로드 (`multipart/form-data`)
+
+binary 필드는 `Blob`이 되고, 요청 본문은 `FormData`로 조립됩니다.
+
+```ts
+export const uploadAvatar = ({
+  id,
+  body,
+}: {
+  id: number;
+  body: { file?: Blob; caption?: string };
+}) => {
+  const formData = new FormData();
+  Object.entries(body).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    formData.append(key, value instanceof Blob ? value : String(value));
+  });
+  return client.post<User>(`/users/${id}/avatar`, formData).then((res) => res.data);
+};
+```
+
+## 식별자가 아닌 이름을 가진 query 파라미터
+
+`page-size`처럼 유효한 식별자가 될 수 없는 query/header 파라미터는, axios가 올바르게
+직렬화하도록 **실제 wire 이름**을 객체 키로 유지하면서도 유효한 TypeScript로 남습니다.
+
+```ts
+export const listUsers = ({ params }: { params?: { "page-size"?: number } }) =>
+  client.get<User[]>(`/users`, { params }).then((res) => res.data);
+```
+
+## 관련 문서
+
+- [Naming Rules](/ko/docs/naming-rules) — 식별자와 wire 이름이 어떻게 도출되는지.
+- [Using the Generated Code](/ko/docs/using-generated-code) — 쿼리와 mutation 패턴.

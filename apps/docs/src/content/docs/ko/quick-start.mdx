@@ -1,0 +1,101 @@
+---
+title: Quick Start
+description: 네 단계로 타입 안전한 TanStack Query 코드를 생성합니다.
+group: 시작하기
+order: 30
+---
+
+Swagger URL에서 타입이 적용된 훅까지 네 단계로 진행합니다. axios 인스턴스를 만들고,
+설정 파일을 추가하고, 스크립트를 실행한 다음, 생성된 코드를 사용하면 됩니다. 먼저
+패키지와 peer dependency를 [설치](/ko/docs/installation)했는지 확인하세요.
+
+## 1. axios 인스턴스 만들기
+
+이 파일은 **여러분의 것**입니다. baseURL, 인증, interceptor를 여기서 설정하세요.
+
+```ts
+// src/lib/axios.ts
+import axios from "axios";
+
+export const axiosInstance = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  timeout: 10_000,
+});
+
+axiosInstance.interceptors.request.use((config) => {
+  const token = localStorage.getItem("accessToken");
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+// Optional: a generic response envelope (see "Response Envelope")
+export interface CommonResponse<T> {
+  result?: boolean;
+  data?: T;
+  message?: string;
+  errorCode?: string | null;
+}
+
+// Optional: a shared error-body type (see "Error Type")
+export interface ApiError {
+  result: false;
+  message: string;
+  errorCode: string | null;
+}
+```
+
+## 2. 설정 파일 추가하기
+
+프로젝트 루트에 `swagger-to-tanstack-query.config.json`을 생성합니다.
+
+```json
+{
+  "url": "https://api.example.com/v3/api-docs",
+  "output": "./src/api",
+  "client": { "path": "@/lib/axios", "name": "axiosInstance" },
+  "response": {
+    "dataField": "data",
+    "envelope": { "path": "@/lib/axios", "name": "CommonResponse" }
+  },
+  "error": { "path": "@/lib/axios", "name": "ApiError" }
+}
+```
+
+사용 가능한 모든 필드는 [Configuration](/ko/docs/configuration)을 참고하세요.
+
+## 3. 스크립트 추가 후 실행하기
+
+```json
+// package.json
+{ "scripts": { "codegen": "swagger-to-tanstack-query" } }
+```
+
+```bash
+npm run codegen
+```
+
+```
+swagger-to-tanstack-query
+  spec   : https://api.example.com/v3/api-docs
+  output : ./src/api
+  client : axiosInstance from "@/lib/axios"
+  generating...
+  done. 13 controllers, 65 files.
+```
+
+## 4. 사용하기
+
+```tsx
+import { useQuery } from "@tanstack/react-query";
+import { contactQueries } from "@/api/contact";
+
+function ContactName({ id }: { id: number }) {
+  const { data } = useQuery(contactQueries.getContact({ contactId: id }));
+  return <span>{data?.name}</span>; // payload is unwrapped
+}
+```
+
+## 다음 단계
+
+- 생성기가 만들어 내는 [Output Structure](/ko/docs/output-structure)를 알아보세요.
+- [Using the Generated Code](/ko/docs/using-generated-code)에서 더 많은 패턴을 확인하세요.

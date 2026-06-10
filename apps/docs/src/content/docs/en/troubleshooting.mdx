@@ -1,0 +1,39 @@
+---
+title: Troubleshooting
+description: Fixes for the most common issues when generating code.
+group: Reference
+order: 140
+---
+
+Common issues and how to resolve them.
+
+## "config not found"
+
+The file must be named exactly `swagger-to-tanstack-query.config.json` and live in
+the directory you run the command from.
+
+## I only have the Swagger UI URL
+
+The machine-readable spec is served separately. For springdoc (Spring Boot) it's
+usually `https://<host>/v3/api-docs`. Open it in a browser; if you see JSON,
+that's your `url`.
+
+## `data` is `T | undefined` after unwrapping
+
+The envelope's `data` field is optional in your spec, so the unwrapped type is
+too. Narrow it (`data?.x`) or mark the field required in the API. See
+[Response Envelope](/docs/response-envelope).
+
+## A controller is named `default`
+
+Those operations have no `tags` in the spec. Add tags to group them.
+
+## Imports use `@/…` but don't resolve
+
+`client.path`/`error.path` are written verbatim. Make sure your `tsconfig.json`
+`paths` (and bundler) define the alias. See [Configuration](/docs/configuration).
+
+## Related
+
+- [Limitations & Roadmap](/docs/limitations) — known constraints.
+- [Configuration](/docs/configuration) — config reference.

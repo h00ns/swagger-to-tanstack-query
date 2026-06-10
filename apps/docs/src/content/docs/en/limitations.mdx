@@ -1,0 +1,20 @@
+---
+title: Limitations & Roadmap
+description: Known constraints and planned improvements.
+group: Reference
+order: 150
+---
+
+The current known limitations and items on the roadmap.
+
+## Limitations
+
+- No per-query option injection yet (use `useQuery({ ...queries.x({ id }), enabled })` for now).
+- No `infiniteQueryOptions` generation for paginated endpoints.
+- Enums are string-literal unions (no `enum`/`as const` object option).
+- One success media type (`application/json`) per response.
+
+## Related
+
+- [Conventions & Design Decisions](/docs/conventions) — the design choices behind the output.
+- [Troubleshooting](/docs/troubleshooting) — fixes for common issues.

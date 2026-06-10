@@ -1,62 +1,24 @@
 {
-  "name": "swagger-to-tanstack-query",
-  "version": "0.1.0",
-  "description": "Generate TanStack Query (queryOptions) hooks, APIs and types from a Swagger/OpenAPI spec, split by controller.",
+  "name": "swagger-to-tanstack-query-monorepo",
+  "version": "0.0.0",
+  "private": true,
   "type": "module",
-  "bin": {
-    "swagger-to-tanstack-query": "./dist/cli.js"
-  },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
+  "packageManager": "pnpm@10.33.0",
   "engines": {
     "node": ">=18"
   },
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
-    "start": "node ./dist/cli.js",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "prepublishOnly": "npm run build"
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "dev": "pnpm -r --parallel dev",
+    "dev:docs": "pnpm --filter docs dev",
+    "build:core": "pnpm --filter swagger-to-tanstack-query build"
   },
-  "keywords": [
-    "swagger",
-    "openapi",
-    "tanstack",
-    "react-query",
-    "queryOptions",
-    "codegen",
-    "axios"
-  ],
   "license": "MIT",
   "author": "h00ns",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/h00ns/swagger-to-tanstack-query.git"
-  },
-  "homepage": "https://github.com/h00ns/swagger-to-tanstack-query#readme",
-  "bugs": {
-    "url": "https://github.com/h00ns/swagger-to-tanstack-query/issues"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "dependencies": {
-    "@apidevtools/swagger-parser": "^10.1.1",
-    "prettier": "^3.4.2"
-  },
-  "devDependencies": {
-    "@types/node": "^22.10.5",
-    "tsup": "^8.3.5",
-    "typescript": "^5.7.3",
-    "vitest": "^2.1.8"
-  },
-  "peerDependencies": {
-    "@tanstack/react-query": ">=5.0.0",
-    "axios": ">=1.0.0"
   }
 }

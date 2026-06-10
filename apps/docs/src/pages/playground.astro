@@ -1,0 +1,19 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Playground from "../components/playground/Playground.tsx";
+---
+
+<BaseLayout
+  title="Playground"
+  description="Paste an OpenAPI/Swagger spec and watch it become fully-typed TanStack Query code in your browser."
+  appShell={true}
+>
+  <Playground client:only="react">
+    <div
+      slot="fallback"
+      class="flex h-[calc(100dvh-var(--header-h))] items-center justify-center text-text-muted"
+    >
+      Loading playground…
+    </div>
+  </Playground>
+</BaseLayout>

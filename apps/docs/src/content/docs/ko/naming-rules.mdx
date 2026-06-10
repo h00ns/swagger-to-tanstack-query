@@ -1,0 +1,27 @@
+---
+title: 네이밍 규칙
+description: 컨트롤러, operation, 타입, query key의 이름이 어떤 규칙으로 정해지는지 설명합니다.
+group: 레퍼런스
+order: 110
+---
+
+생성기는 일관된 규칙에 따라 스펙에서 폴더 이름, 함수 이름, 타입 이름, query key를
+도출합니다.
+
+## 규칙
+
+| 원본                          | 결과                          | 예시                                      |
+| ---------------------------- | ----------------------------- | ---------------------------------------- |
+| 컨트롤러 (OpenAPI `tag`)      | kebab-case 폴더               | `ContactTag` → `contact-tag/`            |
+| Operation                    | `operationId`에서 camelCase   | `getContact` → `getContact`              |
+| Operation (`operationId` 없음) | `method` + path 세그먼트     | `GET /users/{id}` → `getUsersId`         |
+| Operation (예약어)            | `_` 접미사 추가               | `delete` → `delete_`                     |
+| Query export 객체             | `<controllerCamel>Queries`    | `contactQueries`                         |
+| Mutation 훅                   | `use` + PascalCase(operation) | `createContact` → `useCreateContact`     |
+| 스키마 타입                   | 정제된 스키마 이름            | `Page«User»` → `PageOfUser`              |
+| Query key                    | `[dir, op, args]`             | `["contact", "getContact", { contactId: 1 }]` |
+
+## 관련 문서
+
+- [Conventions & Design Decisions](/ko/docs/conventions) — 이 규칙들의 근거.
+- [Advanced Features](/ko/docs/advanced-features) — 식별자가 아닌 wire 이름 보존하기.

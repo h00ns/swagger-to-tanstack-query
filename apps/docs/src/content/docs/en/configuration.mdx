@@ -1,0 +1,69 @@
+---
+title: Configuration
+description: Every field in swagger-to-tanstack-query.config.json explained.
+group: Configuration
+order: 40
+---
+
+The config file `swagger-to-tanstack-query.config.json` is read from the directory
+where the command runs (your project root).
+
+## Full example
+
+```jsonc
+{
+  // Swagger/OpenAPI document URL (a local file path also works).
+  "url": "https://api.example.com/v3/api-docs",
+
+  // Output directory, relative to cwd. Wiped & regenerated on every run.
+  "output": "./src/api",
+
+  // Your axios instance.
+  "client": {
+    "path": "@/lib/axios",   // import path written verbatim into generated files
+    "name": "axiosInstance"  // named export; omit (or "default") for a default import
+  },
+
+  // Optional: common success-envelope handling.
+  // `envelope` reuses one generic CommonResponse<T> instead of per-endpoint interfaces.
+  "response": {
+    "dataField": "data",
+    "envelope": { "path": "@/lib/axios", "name": "CommonResponse" }
+  },
+
+  // Optional: common error type, applied as AxiosError<T> to hooks.
+  "error": { "path": "@/lib/axios", "name": "ApiError" },
+
+  // Optional: run Prettier on output. Default true.
+  "format": true
+}
+```
+
+## Fields
+
+| Field                | Type      | Required | Default     | Description                                                                  |
+| -------------------- | --------- | :------: | ----------- | ---------------------------------------------------------------------------- |
+| `url`                | `string`  |    ✅    | —           | Swagger/OpenAPI document URL or local path. Swagger 2.0 & OpenAPI 3.x.       |
+| `output`             | `string`  |    ✅    | —           | Output directory (relative to cwd). **Wiped & regenerated every run.**       |
+| `client.path`        | `string`  |    ✅    | —           | Import path of your axios instance module.                                   |
+| `client.name`        | `string`  |    –     | `"default"` | Named export to import. Omit for a default export.                           |
+| `response.dataField` | `string`  |    –     | _(off)_     | Unwrap this envelope field as the payload. See [Response Envelope](/docs/response-envelope). |
+| `response.envelope`  | `object`  |    –     | _(off)_     | `{ path, name }` of a generic envelope type → `Envelope<Inner>`. Requires `dataField`. |
+| `error.path`         | `string`  |    –     | —           | Import path of your error-body type. See [Error Type](/docs/error-type).     |
+| `error.name`         | `string`  |    –     | `"default"` | Named export of the error type. Omit for a default export.                   |
+| `format`             | `boolean` |    –     | `true`      | Format generated files with Prettier.                                        |
+
+## `client.name` behavior
+
+The `name` controls whether a named or default import is written into the
+generated `apis.ts`:
+
+| Config                                               | Generated import in `apis.ts`                            |
+| ---------------------------------------------------- | -------------------------------------------------------- |
+| `{ "path": "@/lib/axios", "name": "axiosInstance" }` | `import { axiosInstance as client } from "@/lib/axios";` |
+| `{ "path": "@/lib/axios" }` (no `name`)              | `import client from "@/lib/axios";`                      |
+
+## Related
+
+- [Response Envelope](/docs/response-envelope) — unwrap success envelopes.
+- [Error Type](/docs/error-type) — type every hook's `error` as `AxiosError<T>`.

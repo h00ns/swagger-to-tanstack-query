@@ -1,0 +1,101 @@
+---
+title: Quick Start
+description: Generate typed TanStack Query code in four steps.
+group: Getting Started
+order: 30
+---
+
+Go from a Swagger URL to typed hooks in four steps: create your axios instance,
+add a config file, run the script, and use the generated code. Make sure you have
+[installed](/docs/installation) the package and its peer dependencies first.
+
+## 1. Create your axios instance
+
+This file is **yours** — configure baseURL, auth, and interceptors here.
+
+```ts
+// src/lib/axios.ts
+import axios from "axios";
+
+export const axiosInstance = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  timeout: 10_000,
+});
+
+axiosInstance.interceptors.request.use((config) => {
+  const token = localStorage.getItem("accessToken");
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+// Optional: a generic response envelope (see "Response Envelope")
+export interface CommonResponse<T> {
+  result?: boolean;
+  data?: T;
+  message?: string;
+  errorCode?: string | null;
+}
+
+// Optional: a shared error-body type (see "Error Type")
+export interface ApiError {
+  result: false;
+  message: string;
+  errorCode: string | null;
+}
+```
+
+## 2. Add the config file
+
+Create `swagger-to-tanstack-query.config.json` in your project root:
+
+```json
+{
+  "url": "https://api.example.com/v3/api-docs",
+  "output": "./src/api",
+  "client": { "path": "@/lib/axios", "name": "axiosInstance" },
+  "response": {
+    "dataField": "data",
+    "envelope": { "path": "@/lib/axios", "name": "CommonResponse" }
+  },
+  "error": { "path": "@/lib/axios", "name": "ApiError" }
+}
+```
+
+See [Configuration](/docs/configuration) for every available field.
+
+## 3. Add a script and run
+
+```json
+// package.json
+{ "scripts": { "codegen": "swagger-to-tanstack-query" } }
+```
+
+```bash
+npm run codegen
+```
+
+```
+swagger-to-tanstack-query
+  spec   : https://api.example.com/v3/api-docs
+  output : ./src/api
+  client : axiosInstance from "@/lib/axios"
+  generating...
+  done. 13 controllers, 65 files.
+```
+
+## 4. Use it
+
+```tsx
+import { useQuery } from "@tanstack/react-query";
+import { contactQueries } from "@/api/contact";
+
+function ContactName({ id }: { id: number }) {
+  const { data } = useQuery(contactQueries.getContact({ contactId: id }));
+  return <span>{data?.name}</span>; // payload is unwrapped
+}
+```
+
+## Next steps
+
+- Learn the [Output Structure](/docs/output-structure) the generator produces.
+- See more patterns in [Using the Generated Code](/docs/using-generated-code).

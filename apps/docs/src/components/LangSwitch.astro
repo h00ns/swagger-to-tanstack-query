@@ -1,0 +1,30 @@
+---
+import { locales, switchLocalePath, localeFromPath, t } from "../i18n/ui";
+
+const pathname = Astro.url.pathname;
+const current = localeFromPath(pathname);
+---
+
+<div
+  class="flex items-center gap-0.5 rounded-full border border-border-strong p-0.5"
+  role="group"
+  aria-label={t(current, "lang.label")}
+>
+  {
+    locales.map((loc) => {
+      const active = loc === current;
+      return (
+        <a
+          href={switchLocalePath(pathname, loc)}
+          aria-current={active ? "true" : undefined}
+          class:list={[
+            "rounded-full px-2.5 py-1 text-xs font-semibold uppercase transition-colors duration-150",
+            active ? "bg-primary-soft text-primary" : "text-text-muted hover:text-text",
+          ]}
+        >
+          {loc}
+        </a>
+      );
+    })
+  }
+</div>

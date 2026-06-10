@@ -1,0 +1,162 @@
+---
+title: Generated Files
+description: A tour of the five files generated for each controller.
+group: Output
+order: 80
+---
+
+Each controller folder contains five files: `types.ts`, `apis.ts`, `queries.ts`,
+`mutations.ts`, and an `index.ts` barrel. The examples below are **real output**
+from a Spring Boot (springdoc) API, with `response.dataField: "data"` and `error`
+configured.
+
+## `types.ts`
+
+Every named schema reachable from the controller's operations is emitted here,
+transitively. Object schemas become `interface`s; unions/enums become `type`
+aliases. `description` becomes JSDoc.
+
+```ts
+// contact/types.ts
+/** Common API response envelope */
+export interface CommonResponseDetail {
+  result?: boolean;
+  data?: Detail;
+  message?: string;
+  errorCode?: string | null;
+}
+
+export interface Detail {
+  id?: number;
+  name: string;
+  status?: "ACTIVE" | "ARCHIVED" | "DELETED";
+  tags?: Array<Tag>;
+}
+```
+
+## `apis.ts`
+
+Plain functions calling **your** axios instance. Every function takes a **single
+object argument** containing all of `{ ...pathParams, body, params, headers }`
+that the operation needs — so call sites are named and order-independent, which
+matters once an endpoint has more than one path param.
+
+```ts
+// contact/apis.ts
+import { axiosInstance as client } from "@/lib/axios";
+import type { CommonResponse } from "@/lib/axios";
+import type { Detail, Create } from "./types";
+
+/** Get contact details */
+export const getContact = ({ contactId }: { contactId: number }) =>
+  client.get<CommonResponse<Detail>>(`/api/v1/contacts/${contactId}`).then((res) => res.data.data);
+
+/** Create a contact */
+export const createContact = ({ body }: { body: Create }) =>
+  client.post<CommonResponse<Create>>(`/api/v1/contacts`, body).then((res) => res.data.data);
+
+/** Delete a single contact (soft) */
+export const deleteContact = ({ contactId }: { contactId: number }) =>
+  client.delete<CommonResponse<unknown>>(`/api/v1/contacts/${contactId}`).then((res) => res.data.data);
+```
+
+## `queries.ts`
+
+The v5 **`queryOptions`** pattern, exported as `<controller>Queries`. The
+`queryKey` is `[controllerDir, operationName, ...args]`.
+
+```ts
+// contact/queries.ts
+import { queryOptions } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
+import type { ApiError } from "@/lib/axios";
+import * as apis from "./apis";
+
+export const contactQueries = {
+  getContact: (args: { contactId: number }) =>
+    queryOptions<Awaited<ReturnType<typeof apis.getContact>>, AxiosError<ApiError>>({
+      queryKey: ["contact", "getContact", args],
+      queryFn: () => apis.getContact(args),
+    }),
+};
+```
+
+> The options object is reusable across `useQuery`, `useSuspenseQuery`,
+> `prefetchQuery`, `ensureQueryData`, `invalidateQueries`, etc.
+
+## `mutations.ts`
+
+One `useXxx` hook per mutating endpoint. Each accepts an optional
+`UseMutationOptions` (minus `mutationFn`), so you can pass `onSuccess`,
+`onError`, `retry`, … The mutation's `variables` is the same single object the
+api takes (`{ ...pathParams, body, params, headers }`).
+
+```ts
+// contact/mutations.ts
+import { useMutation } from "@tanstack/react-query";
+import type { UseMutationOptions } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
+import type { ApiError } from "@/lib/axios";
+import * as apis from "./apis";
+import type { Create, Update } from "./types";
+
+/** Create a contact */
+export const useCreateContact = (
+  options?: Omit<
+    UseMutationOptions<
+      Awaited<ReturnType<typeof apis.createContact>>,
+      AxiosError<ApiError>,
+      { body: Create }
+    >,
+    "mutationFn"
+  >,
+) =>
+  useMutation({
+    mutationFn: (vars: { body: Create }) => apis.createContact(vars),
+    ...options,
+  });
+
+/** Update a contact (path param + body) */
+export const useUpdateContact = (
+  options?: Omit<
+    UseMutationOptions<
+      Awaited<ReturnType<typeof apis.updateContact>>,
+      AxiosError<ApiError>,
+      { contactId: number; body: Update }
+    >,
+    "mutationFn"
+  >,
+) =>
+  useMutation({
+    mutationFn: (vars: { contactId: number; body: Update }) => apis.updateContact(vars),
+    ...options,
+  });
+```
+
+> The mutation's `variables` **is** the api's object argument, so every hook is
+> called the same way: `mutate({ ...pathParams, body, params })`.
+
+## `index.ts`
+
+A per-controller barrel:
+
+```ts
+// contact/index.ts
+export * from "./types";
+export * from "./apis";
+export * from "./queries";
+export * from "./mutations";
+```
+
+Import from a specific file or the folder:
+
+```ts
+import { contactQueries } from "@/api/contact/queries";
+// or
+import { contactQueries, useCreateContact, type Detail } from "@/api/contact";
+```
+
+## Related
+
+- [Output Structure](/docs/output-structure) — the folder layout.
+- [Using the Generated Code](/docs/using-generated-code) — query, mutate, invalidate, prefetch.

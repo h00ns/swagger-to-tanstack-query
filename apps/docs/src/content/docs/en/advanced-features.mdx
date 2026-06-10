@@ -1,0 +1,64 @@
+---
+title: Advanced Features
+description: Header parameters, file uploads, and non-identifier parameter names.
+group: Usage
+order: 100
+---
+
+Beyond plain path params and bodies, the generator handles header parameters,
+`multipart/form-data` file uploads, and query/header params whose wire names are
+not valid TypeScript identifiers.
+
+## Header parameters
+
+`in: header` parameters become a `headers` object argument, forwarded via the
+axios request config. Real header names are preserved:
+
+```ts
+// GET /users/{id} with a required X-Trace-Id header
+export const getUser = ({ id, headers }: { id: number; headers: { "X-Trace-Id": string } }) =>
+  client.get<User>(`/users/${id}`, { headers }).then((res) => res.data);
+```
+
+```ts
+useQuery(userQueries.getUser({ id: 1, headers: { "X-Trace-Id": traceId } }));
+```
+
+> Auth headers handled by your axios interceptor don't appear here — only header
+> parameters explicitly declared in the spec.
+
+## File uploads (`multipart/form-data`)
+
+Binary fields become `Blob`, and the request body is assembled into a `FormData`:
+
+```ts
+export const uploadAvatar = ({
+  id,
+  body,
+}: {
+  id: number;
+  body: { file?: Blob; caption?: string };
+}) => {
+  const formData = new FormData();
+  Object.entries(body).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    formData.append(key, value instanceof Blob ? value : String(value));
+  });
+  return client.post<User>(`/users/${id}/avatar`, formData).then((res) => res.data);
+};
+```
+
+## Query parameters with non-identifier names
+
+A query/header param like `page-size` keeps its **real wire name** as the object
+key (so axios serializes it correctly), while remaining valid TypeScript:
+
+```ts
+export const listUsers = ({ params }: { params?: { "page-size"?: number } }) =>
+  client.get<User[]>(`/users`, { params }).then((res) => res.data);
+```
+
+## Related
+
+- [Naming Rules](/docs/naming-rules) — how identifiers and wire names are derived.
+- [Using the Generated Code](/docs/using-generated-code) — query and mutation patterns.

@@ -1,0 +1,91 @@
+---
+import MobileNav from "./MobileNav.tsx";
+import LangSwitch from "./LangSwitch.astro";
+import { docsPath, localeFromPath, switchLocalePath, t, locales } from "../i18n/ui";
+
+const GITHUB_URL = "https://github.com/h00ns/swagger-to-tanstack-query";
+const path = Astro.url.pathname;
+const locale = localeFromPath(path);
+
+const links = [
+  { label: t(locale, "nav.docs"), href: docsPath(locale, "introduction"), match: "docs" },
+  { label: t(locale, "nav.playground"), href: "/playground", match: "playground" },
+  { label: t(locale, "nav.github"), href: GITHUB_URL, external: true },
+];
+const isActive = (match?: string) => !!match && path.includes(`/${match}`);
+
+// Localized links for the mobile drawer (+ language switch).
+const mobileLinks = links.map(({ label, href, external }) => ({ label, href, external: !!external }));
+const mobileCta = { label: t(locale, "cta.playground"), href: "/playground" };
+const langLinks = locales.map((loc) => ({
+  code: loc,
+  href: switchLocalePath(path, loc),
+  active: loc === locale,
+}));
+---
+
+<header
+  id="site-header"
+  class="sticky top-0 z-[var(--z-header)] h-[var(--header-h)] border-b border-border-muted backdrop-blur-md transition-[border-color,box-shadow] duration-300"
+  style="background-color: oklch(0.17 0.012 255 / 0.72)"
+>
+  <div class="mx-auto flex h-full max-w-[var(--container-max)] items-center gap-6 px-6">
+    <a
+      href={locale === "ko" ? "/ko" : "/"}
+      class="flex shrink-0 items-center font-mono text-sm font-semibold tracking-tight text-text transition-colors hover:text-text sm:text-[0.95rem]"
+      aria-label="swagger-to-tanstack-query home"
+    >
+      swagger-to-<span class="text-primary">tanstack</span>-query
+    </a>
+
+    <nav aria-label="Primary" class="ml-auto hidden items-center gap-1 md:flex">
+      {
+        links.map((link) => (
+          <a
+            href={link.href}
+            target={link.external ? "_blank" : undefined}
+            rel={link.external ? "noopener noreferrer" : undefined}
+            class:list={[
+              "relative rounded-sm px-3 py-2 text-sm transition-colors duration-150",
+              isActive(link.match) ? "text-text" : "text-text-muted hover:text-text",
+            ]}
+          >
+            {link.label}
+            {isActive(link.match) && (
+              <span class="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-primary glow-primary-sm" />
+            )}
+          </a>
+        ))
+      }
+    </nav>
+
+    <div class="hidden md:block">
+      <LangSwitch />
+    </div>
+
+    <a
+      href="/playground"
+      class="ml-1 hidden items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-text-on-primary shadow-[var(--shadow-2)] transition-[background-color,box-shadow,transform] duration-150 hover:-translate-y-px hover:bg-primary-hover hover:shadow-[var(--glow-primary-sm)] md:inline-flex"
+    >
+      {t(locale, "cta.playground")}
+    </a>
+
+    <div class="ml-auto md:hidden">
+      <MobileNav client:load links={mobileLinks} cta={mobileCta} langLinks={langLinks} />
+    </div>
+  </div>
+</header>
+
+<script>
+  // Strengthen the header border + shadow once the page is scrolled.
+  const header = document.getElementById("site-header");
+  const onScroll = () => {
+    if (!header) return;
+    const scrolled = window.scrollY > 8;
+    header.classList.toggle("border-border", scrolled);
+    header.classList.toggle("border-border-muted", !scrolled);
+    header.style.boxShadow = scrolled ? "var(--shadow-1)" : "none";
+  };
+  onScroll();
+  window.addEventListener("scroll", onScroll, { passive: true });
+</script>

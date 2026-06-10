@@ -1,0 +1,20 @@
+---
+title: 제약 사항과 로드맵
+description: 알려진 제약 사항과 향후 개선 계획.
+group: 레퍼런스
+order: 150
+---
+
+현재 알려진 제약 사항과 로드맵에 올라 있는 항목들입니다.
+
+## 제약 사항
+
+- 아직 쿼리별 옵션 주입을 지원하지 않습니다(당분간 `useQuery({ ...queries.x({ id }), enabled })`를 사용하세요).
+- 페이지네이션 엔드포인트를 위한 `infiniteQueryOptions` 생성을 지원하지 않습니다.
+- enum은 문자열 리터럴 유니온입니다(`enum`/`as const` 객체 옵션은 없습니다).
+- 응답당 하나의 성공 미디어 타입(`application/json`)만 지원합니다.
+
+## 관련 문서
+
+- [Conventions & Design Decisions](/ko/docs/conventions) — 출력 이면의 설계 선택.
+- [Troubleshooting](/ko/docs/troubleshooting) — 흔한 문제의 해결 방법.

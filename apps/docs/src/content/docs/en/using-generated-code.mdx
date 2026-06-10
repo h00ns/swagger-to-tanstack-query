@@ -1,0 +1,85 @@
+---
+title: Using the Generated Code
+description: Query, mutate, invalidate, and prefetch with the generated hooks.
+group: Usage
+order: 90
+---
+
+Once code is generated, you use the [generated files](/docs/generated-files)
+directly with TanStack Query. This page covers the common patterns: queries,
+mutations, invalidation, and prefetch/SSR.
+
+## Queries
+
+```tsx
+import { useQuery } from "@tanstack/react-query";
+import { contactQueries } from "@/api/contact";
+
+function ContactDetail({ id }: { id: number }) {
+  const { data, isLoading, error } = useQuery(contactQueries.getContact({ contactId: id }));
+
+  if (isLoading) return <p>Loading…</p>;
+  if (error) return <p>{error.response?.data.message}</p>;
+  return <h1>{data?.name}</h1>;
+}
+```
+
+The same options work with `useSuspenseQuery`:
+
+```tsx
+const { data } = useSuspenseQuery(contactQueries.getContact({ contactId: id }));
+//      ^? Detail (non-nullable under Suspense)
+```
+
+## Mutations
+
+```tsx
+import { useCreateContact } from "@/api/contact";
+
+const { mutate, isPending } = useCreateContact();
+mutate({ body: { name: "John Doe", phoneNumber: "010-0000-0000" } });
+```
+
+For an endpoint with a path param + body, the same single object carries both:
+
+```tsx
+import { useUpdateContact } from "@/api/contact";
+
+const { mutate } = useUpdateContact();
+mutate({ contactId: 1, body: { name: "New name" } });
+```
+
+## Invalidation
+
+```tsx
+import { useQueryClient } from "@tanstack/react-query";
+import { useCreateContact } from "@/api/contact";
+import { contactQueries } from "@/api/contact";
+
+function useCreateContactAndRefresh() {
+  const queryClient = useQueryClient();
+  return useCreateContact({
+    onSuccess: () => {
+      // everything under the "contact" controller
+      queryClient.invalidateQueries({ queryKey: ["contact"] });
+      // or one specific query
+      queryClient.invalidateQueries({ queryKey: contactQueries.getContact({ contactId: 1 }).queryKey });
+    },
+  });
+}
+```
+
+## Prefetch / SSR
+
+```ts
+import { QueryClient } from "@tanstack/react-query";
+import { contactQueries } from "@/api/contact";
+
+const queryClient = new QueryClient();
+await queryClient.prefetchQuery(contactQueries.getContact({ contactId: 1 }));
+```
+
+## Related
+
+- [Advanced Features](/docs/advanced-features) — header params, file uploads, non-identifier param names.
+- [Error Type](/docs/error-type) — typed `error.response?.data`.

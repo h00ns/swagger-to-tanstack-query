@@ -1,0 +1,86 @@
+---
+title: Response Envelope
+description: Unwrap a shared success envelope so hooks return the inner payload.
+group: Configuration
+order: 50
+---
+
+Most APIs wrap every response in a shared envelope. With `response.dataField`,
+the generated apis unwrap it for you, so hooks return the **inner payload**
+instead of the full envelope.
+
+## The problem
+
+A typical success envelope looks like this:
+
+```jsonc
+// CommonResponseDetail
+{ "result": true, "data": { /* the real payload */ }, "message": "OK", "errorCode": null }
+```
+
+## Unwrapping with `dataField`
+
+Set `response.dataField` and generated apis unwrap it:
+
+```jsonc
+"response": { "dataField": "data" }
+```
+
+```ts
+// off  →  client.get<CommonResponseDetail>(url).then((res) => res.data);       // CommonResponseDetail
+// on   →  client.get<CommonResponseDetail>(url).then((res) => res.data.data);  // Detail | undefined
+```
+
+```ts
+const { data } = useQuery(contactQueries.getContact({ contactId: 1 }));
+//      ^? Detail | undefined          (not CommonResponseDetail)
+```
+
+- Applied **only** to operations whose success schema actually has the field —
+  `void`/`204` responses and field-less bodies are left untouched.
+- The axios generic still uses the full envelope type, so unwrapping is type-safe.
+
+## Generic envelope (recommended)
+
+By default each endpoint gets its own `CommonResponseXxx` interface, duplicating
+`result` / `message` / `errorCode` everywhere. Instead, define **one generic
+envelope** in your module and reference it via `response.envelope`:
+
+```ts
+// @/lib/axios.ts
+export interface CommonResponse<T> {
+  result?: boolean;
+  data?: T;
+  message?: string;
+  errorCode?: string | null;
+}
+```
+
+```jsonc
+"response": {
+  "dataField": "data",
+  "envelope": { "path": "@/lib/axios", "name": "CommonResponse" }
+}
+```
+
+Now responses are typed as `CommonResponse<Inner>` and the per-endpoint envelope
+interfaces are **no longer generated**:
+
+```ts
+// apis.ts
+export const getContact = ({ contactId }: { contactId: number }) =>
+  client.get<CommonResponse<Detail>>(`/api/v1/contacts/${contactId}`).then((res) => res.data.data);
+
+export const deleteContact = ({ contactId }: { contactId: number }) =>
+  client.delete<CommonResponse<unknown>>(`/api/v1/contacts/${contactId}`).then((res) => res.data.data);
+```
+
+- Requires `dataField` (it's the type parameter slot).
+- The inner type (`Detail`, `Array<User>`, …) is extracted from the envelope's
+  `dataField`; void payloads become `CommonResponse<unknown>`.
+- `name` may be a named or default export (same rules as `client`/`error`).
+
+## Related
+
+- [Configuration](/docs/configuration) — the full field reference.
+- [Error Type](/docs/error-type) — type errors with `AxiosError<T>`.

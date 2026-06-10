@@ -1,0 +1,33 @@
+---
+title: Output Structure
+description: How the generator lays out one self-contained folder per controller.
+group: Output
+order: 70
+---
+
+The generator produces one folder per controller (OpenAPI tag), each
+self-contained with five files.
+
+## Folder layout
+
+```
+<output>/
+├─ contact/                 # one folder per controller (OpenAPI tag)
+│  ├─ index.ts              # barrel: re-exports the four files below
+│  ├─ types.ts              # interfaces/types this controller uses
+│  ├─ apis.ts               # raw axios request functions
+│  ├─ queries.ts            # queryOptions object (for GET/HEAD)
+│  └─ mutations.ts          # useMutation hooks (for POST/PUT/PATCH/DELETE)
+├─ user/
+│  └─ …
+└─ group/
+   └─ …
+```
+
+> There is **no** root-level barrel — each controller is imported directly from
+> its folder so imports stay explicit and grep-able.
+
+## Related
+
+- [Generated Files](/docs/generated-files) — what each of the five files contains.
+- [Conventions & Design Decisions](/docs/conventions) — why it is laid out this way.

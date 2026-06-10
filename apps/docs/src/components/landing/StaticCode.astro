@@ -1,0 +1,63 @@
+---
+/**
+ * Landing-owned code surface (DESIGN.md §3.6) for static, accessible, copyable
+ * real code. Used instead of expressive-code's `<Code>` component, which cannot
+ * be invoked here because the shared `astro.config.mjs` passes a non-serializable
+ * `themeCssSelector` function to the Expressive Code integration (see report).
+ *
+ * Highlighting is done at build time with Shiki + the project's `s2tqNight`
+ * theme, so the output matches the docs code fences exactly and ships no runtime
+ * highlighter.
+ */
+import { codeToHtml } from "shiki";
+import { s2tqNight } from "../../lib/shiki-theme";
+
+interface Props {
+  code: string;
+  lang: "ts" | "tsx" | "json" | "bash";
+  title: string;
+}
+
+const { code, lang, title } = Astro.props;
+
+const html = await codeToHtml(code, { lang, theme: s2tqNight });
+
+const langTint: Record<Props["lang"], string> = {
+  ts: "bg-primary-soft text-primary",
+  tsx: "bg-primary-soft text-primary",
+  json: "bg-warn-soft text-warn",
+  bash: "bg-accent-soft text-accent",
+};
+---
+
+<figure class="overflow-hidden rounded-xl border border-border bg-surface shadow-[var(--shadow-2)]">
+  <figcaption
+    class="flex h-10 items-center gap-2 border-b border-border-muted bg-surface-raised px-4"
+  >
+    <span class="flex items-center gap-1.5" aria-hidden="true">
+      <span class="size-2.5 rounded-full" style="background:#FF6B5E;opacity:.9"></span>
+      <span class="size-2.5 rounded-full" style="background:#F2C14E;opacity:.9"></span>
+      <span class="size-2.5 rounded-full" style="background:#38E59B;opacity:.9"></span>
+    </span>
+    <span class="ml-1 font-mono text-[13px] text-text-muted">{title}</span>
+    <span
+      class:list={[
+        "ml-auto rounded-sm px-2 py-0.5 font-mono text-[11px] uppercase tracking-wide",
+        langTint[lang],
+      ]}>{lang}</span
+    >
+  </figcaption>
+  <div class="s2tq-code overflow-x-auto p-4 text-[13px]" set:html={html} />
+</figure>
+
+<style is:global>
+  .s2tq-code pre {
+    margin: 0;
+    background: transparent !important;
+    font-family: var(--font-mono);
+    line-height: 1.65;
+  }
+  .s2tq-code code {
+    font-family: var(--font-mono);
+  }
+</style>

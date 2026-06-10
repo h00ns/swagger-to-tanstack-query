@@ -1,0 +1,27 @@
+---
+title: Naming Rules
+description: How controllers, operations, types, and query keys are named.
+group: Reference
+order: 110
+---
+
+The generator derives folder names, function names, type names, and query keys
+from the spec using a consistent set of rules.
+
+## Rules
+
+| Source                       | Result                        | Example                                  |
+| ---------------------------- | ----------------------------- | ---------------------------------------- |
+| Controller (OpenAPI `tag`)   | kebab-case folder             | `ContactTag` → `contact-tag/`            |
+| Operation                    | camelCase from `operationId`  | `getContact` → `getContact`              |
+| Operation (no `operationId`) | `method` + path segments      | `GET /users/{id}` → `getUsersId`         |
+| Operation (reserved word)    | suffixed with `_`             | `delete` → `delete_`                     |
+| Query export object          | `<controllerCamel>Queries`    | `contactQueries`                         |
+| Mutation hook                | `use` + PascalCase(operation) | `createContact` → `useCreateContact`     |
+| Schema type                  | sanitized schema name         | `Page«User»` → `PageOfUser`              |
+| Query key                    | `[dir, op, args]`             | `["contact", "getContact", { contactId: 1 }]` |
+
+## Related
+
+- [Conventions & Design Decisions](/docs/conventions) — the rationale behind these rules.
+- [Advanced Features](/docs/advanced-features) — preserving non-identifier wire names.

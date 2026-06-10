@@ -1,0 +1,38 @@
+{
+  "name": "docs",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "typecheck": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^6.0.3",
+    "@astrojs/react": "^5.0.7",
+    "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource-variable/jetbrains-mono": "^5.2.8",
+    "@fontsource-variable/space-grotesk": "^5.2.10",
+    "@tailwindcss/vite": "^4.3.0",
+    "astro": "^6.4.5",
+    "astro-expressive-code": "^0.43.0",
+    "lucide-react": "^1.17.0",
+    "motion": "^12.40.0",
+    "prettier": "^3.8.4",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "shiki": "^4.2.0",
+    "swagger-to-tanstack-query": "workspace:*",
+    "tailwindcss": "^4.3.0",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,41 @@
+---
+title: Introduction
+description: Turn a Swagger/OpenAPI spec into typed TanStack Query code using your own axios instance.
+group: Getting Started
+order: 10
+---
+
+`swagger-to-tanstack-query` is a code generator that turns a **Swagger / OpenAPI**
+spec into typed **TanStack Query** code — split by controller — using **your own
+axios instance**.
+
+Add a config file, point it at your Swagger URL, run one script, and get
+fully-typed **API functions**, **`queryOptions`**, and **`useMutation` hooks** in
+a clean per-controller folder structure.
+
+## The pipeline
+
+The whole workflow is one config file, one command, and a generated folder per controller:
+
+```
+swagger-to-tanstack-query.config.json   ──▶   npm run codegen   ──▶   src/api/<controller>/{index,types,apis,queries,mutations}.ts
+```
+
+## Features
+
+- 🗂️ **Controller-based output** — one folder per OpenAPI tag, each self-contained.
+- 🪝 **TanStack Query v5** — `GET`/`HEAD` → `queryOptions`; `POST/PUT/PATCH/DELETE` → `useXxx` mutation hooks.
+- 🔌 **Bring your own axios** — baseURL / auth / interceptors stay in your instance.
+- 📦 **Response envelope unwrapping** — return the inner payload, not `{ data, message, … }`.
+- 🚨 **Typed errors** — every hook's `error` typed as `AxiosError<YourErrorType>`.
+- 🧬 **Faithful types** — `$ref`, `allOf`/`oneOf`/`anyOf`, enums, nullable, arrays, maps, binary→`Blob`.
+- 📨 **Header params & file uploads** — header params via axios config; `multipart/form-data` as `FormData`.
+- 🧾 **Docs preserved** — `summary` + `@deprecated` become JSDoc.
+- 🔁 **Swagger 2.0 & OpenAPI 3.x**.
+- 🛡️ **Safe identifiers** — reserved words and wire-name mismatches handled.
+
+## Next steps
+
+- Follow the [Quick Start](/docs/quick-start) to generate code in four steps.
+- Read about [Installation](/docs/installation) and peer dependencies.
+- Try it live in the [Playground](/playground).

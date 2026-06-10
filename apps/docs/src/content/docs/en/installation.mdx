@@ -1,0 +1,36 @@
+---
+title: Installation
+description: Install the generator and its peer dependencies.
+group: Getting Started
+order: 20
+---
+
+Install `swagger-to-tanstack-query` as a dev dependency, then make sure its peer
+dependencies are present in your app.
+
+## Install the generator
+
+```bash
+npm install -D swagger-to-tanstack-query
+```
+
+## Peer dependencies
+
+The generated code imports from TanStack Query and axios, so install them in your app:
+
+```bash
+npm install @tanstack/react-query axios
+```
+
+| Peer dependency         | Version  |
+| ----------------------- | -------- |
+| `@tanstack/react-query` | `>= 5.0` |
+| `axios`                 | `>= 1.0` |
+
+## Requirements
+
+Requires **Node.js ≥ 18**.
+
+## Next steps
+
+Continue to the [Quick Start](/docs/quick-start) to generate your first controller.

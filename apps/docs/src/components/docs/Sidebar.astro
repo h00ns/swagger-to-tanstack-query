@@ -1,0 +1,63 @@
+---
+import { getCollection } from "astro:content";
+import { docsPath, slugFromId, type Locale } from "../../i18n/ui";
+
+interface Props {
+  /** Active locale. */
+  locale: Locale;
+  /** Current doc slug (without locale prefix), e.g. "introduction". */
+  current: string;
+}
+const { locale, current } = Astro.props;
+
+const docs = (await getCollection("docs"))
+  .filter((doc) => doc.id.startsWith(`${locale}/`))
+  .sort((a, b) => a.data.order - b.data.order);
+
+// Group by `group`, preserving first-seen order (already order-sorted above).
+const groups: { name: string; items: { slug: string; title: string }[] }[] = [];
+for (const doc of docs) {
+  let group = groups.find((g) => g.name === doc.data.group);
+  if (!group) {
+    group = { name: doc.data.group, items: [] };
+    groups.push(group);
+  }
+  group.items.push({ slug: slugFromId(doc.id), title: doc.data.title });
+}
+---
+
+<nav aria-label="Documentation" class="flex flex-col gap-6">
+  {
+    groups.map((group) => (
+      <div>
+        <h2 class="mb-2 px-3 text-xs font-bold uppercase tracking-[0.08em] text-text-faint">
+          {group.name}
+        </h2>
+        <ul class="flex flex-col gap-0.5">
+          {group.items.map((item) => {
+            const active = item.slug === current;
+            return (
+              <li>
+                <a
+                  href={docsPath(locale, item.slug)}
+                  aria-current={active ? "page" : undefined}
+                  class:list={[
+                    "relative block rounded-sm px-3 py-1.5 text-sm transition-colors duration-150",
+                    active
+                      ? "bg-primary-soft font-medium text-primary"
+                      : "text-text-muted hover:bg-surface hover:text-text",
+                  ]}
+                >
+                  {active && (
+                    <span class="absolute inset-y-1 left-0 w-0.5 rounded-full bg-primary glow-primary-sm" />
+                  )}
+                  {item.title}
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    ))
+  }
+</nav>

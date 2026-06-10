@@ -1,0 +1,83 @@
+---
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+interface Props {
+  headings: Heading[];
+  /** Localized "On this page" label. */
+  label: string;
+}
+const { headings, label } = Astro.props;
+// Only h2/h3 in the TOC.
+const items = headings.filter((h) => h.depth === 2 || h.depth === 3);
+---
+
+{
+  items.length > 0 && (
+    <nav aria-label="On this page" class="flex flex-col gap-3" data-toc>
+      <h2 class="text-xs font-bold uppercase tracking-[0.08em] text-text-faint">{label}</h2>
+      <ul class="flex flex-col gap-1 border-l border-border-muted">
+        {items.map((h) => (
+          <li>
+            <a
+              href={`#${h.slug}`}
+              data-toc-link={h.slug}
+              class:list={[
+                "-ml-px block border-l-2 border-transparent py-1 text-xs text-text-muted transition-colors duration-150 hover:text-text",
+                h.depth === 3 ? "pl-6" : "pl-3",
+              ]}
+            >
+              {h.text}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  )
+}
+
+<script>
+  const links = Array.from(document.querySelectorAll<HTMLAnchorElement>("[data-toc-link]"));
+  const setActive = (slug: string | null) => {
+    for (const link of links) {
+      const active = link.dataset.tocLink === slug;
+      link.classList.toggle("border-primary", active);
+      link.classList.toggle("text-text", active);
+      link.classList.toggle("text-text-muted", !active);
+    }
+  };
+
+  const headings = links
+    .map((l) => document.getElementById(l.dataset.tocLink!))
+    .filter((el): el is HTMLElement => el !== null);
+
+  if (headings.length) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting);
+        if (visible.length) {
+          // Top-most heading currently in the active band wins.
+          visible.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+          setActive(visible[0].target.id);
+        }
+      },
+      { rootMargin: "-64px 0px -70% 0px", threshold: 0 },
+    );
+    headings.forEach((h) => observer.observe(h));
+  }
+
+  // Reading-progress bar under the header.
+  const bar = document.getElementById("reading-progress");
+  if (bar) {
+    const update = () => {
+      const h = document.documentElement;
+      const max = h.scrollHeight - h.clientHeight;
+      bar.style.transform = `scaleX(${max > 0 ? Math.min(h.scrollTop / max, 1) : 0})`;
+    };
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update, { passive: true });
+  }
+</script>

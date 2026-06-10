@@ -1,0 +1,41 @@
+---
+title: Error Type
+description: Type every hook's error as AxiosError of your error-body type.
+group: Configuration
+order: 60
+---
+
+axios always throws an `AxiosError`. Point `error` at your error-body type and
+every hook's `error` becomes `AxiosError<YourType>`, applied per-hook.
+
+## Configuration
+
+```jsonc
+"error": { "path": "@/lib/axios", "name": "ApiError" }
+```
+
+## Typed errors at the call site
+
+```ts
+const { error } = useQuery(contactQueries.getContact({ contactId: 1 }));
+//      ^? AxiosError<ApiError> | null
+//         error.response?.data.errorCode  ✅ typed
+
+const create = useCreateContact({
+  onError: (err) => {
+    //        ^? AxiosError<ApiError>
+    toast(err.response?.data.message);
+  },
+});
+```
+
+## How it is applied
+
+Queries emit `queryOptions<TData, AxiosError<ApiError>>`; mutations emit
+`UseMutationOptions<TData, AxiosError<ApiError>, TVars>`. When `error` is omitted,
+hooks fall back to TanStack's `DefaultError`.
+
+## Related
+
+- [Configuration](/docs/configuration) — the full field reference.
+- [Response Envelope](/docs/response-envelope) — unwrap success envelopes.

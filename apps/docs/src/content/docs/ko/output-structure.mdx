@@ -1,0 +1,33 @@
+---
+title: 출력 구조
+description: 생성기가 컨트롤러마다 자기 완결적인 폴더 하나를 어떻게 배치하는지 설명합니다.
+group: 출력
+order: 70
+---
+
+생성기는 컨트롤러(OpenAPI 태그)마다 폴더 하나씩을 만들며, 각 폴더는 다섯 개의
+파일로 독립적으로 완결됩니다.
+
+## 폴더 구조
+
+```
+<output>/
+├─ contact/                 # one folder per controller (OpenAPI tag)
+│  ├─ index.ts              # barrel: re-exports the four files below
+│  ├─ types.ts              # interfaces/types this controller uses
+│  ├─ apis.ts               # raw axios request functions
+│  ├─ queries.ts            # queryOptions object (for GET/HEAD)
+│  └─ mutations.ts          # useMutation hooks (for POST/PUT/PATCH/DELETE)
+├─ user/
+│  └─ …
+└─ group/
+   └─ …
+```
+
+> 루트 레벨 barrel은 **없습니다.** 각 컨트롤러를 자기 폴더에서 직접 import하므로,
+> import가 명시적이고 grep으로 찾기 쉬운 상태로 유지됩니다.
+
+## 관련 문서
+
+- [Generated Files](/ko/docs/generated-files) — 다섯 개 파일 각각에 담기는 내용.
+- [Conventions & Design Decisions](/ko/docs/conventions) — 이렇게 배치한 이유.

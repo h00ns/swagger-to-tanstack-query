@@ -1,0 +1,85 @@
+---
+title: 생성된 코드 사용하기
+description: 생성된 훅으로 쿼리, mutation, 무효화, prefetch를 수행합니다.
+group: 사용법
+order: 90
+---
+
+코드를 생성하고 나면 [생성된 파일](/ko/docs/generated-files)을 TanStack Query와 함께 곧바로
+사용할 수 있습니다. 이 페이지에서는 쿼리, mutation, 무효화, prefetch/SSR 같은 흔한 패턴을
+다룹니다.
+
+## 쿼리
+
+```tsx
+import { useQuery } from "@tanstack/react-query";
+import { contactQueries } from "@/api/contact";
+
+function ContactDetail({ id }: { id: number }) {
+  const { data, isLoading, error } = useQuery(contactQueries.getContact({ contactId: id }));
+
+  if (isLoading) return <p>로딩 중…</p>;
+  if (error) return <p>{error.response?.data.message}</p>;
+  return <h1>{data?.name}</h1>;
+}
+```
+
+동일한 옵션을 `useSuspenseQuery`에서도 사용할 수 있습니다.
+
+```tsx
+const { data } = useSuspenseQuery(contactQueries.getContact({ contactId: id }));
+//      ^? Detail (non-nullable under Suspense)
+```
+
+## Mutation
+
+```tsx
+import { useCreateContact } from "@/api/contact";
+
+const { mutate, isPending } = useCreateContact();
+mutate({ body: { name: "홍길동", phoneNumber: "010-0000-0000" } });
+```
+
+path 파라미터와 body가 함께 있는 엔드포인트라면, 그 둘을 동일한 단일 객체 하나에 담습니다.
+
+```tsx
+import { useUpdateContact } from "@/api/contact";
+
+const { mutate } = useUpdateContact();
+mutate({ contactId: 1, body: { name: "새 이름" } });
+```
+
+## 무효화
+
+```tsx
+import { useQueryClient } from "@tanstack/react-query";
+import { useCreateContact } from "@/api/contact";
+import { contactQueries } from "@/api/contact";
+
+function useCreateContactAndRefresh() {
+  const queryClient = useQueryClient();
+  return useCreateContact({
+    onSuccess: () => {
+      // everything under the "contact" controller
+      queryClient.invalidateQueries({ queryKey: ["contact"] });
+      // or one specific query
+      queryClient.invalidateQueries({ queryKey: contactQueries.getContact({ contactId: 1 }).queryKey });
+    },
+  });
+}
+```
+
+## Prefetch / SSR
+
+```ts
+import { QueryClient } from "@tanstack/react-query";
+import { contactQueries } from "@/api/contact";
+
+const queryClient = new QueryClient();
+await queryClient.prefetchQuery(contactQueries.getContact({ contactId: 1 }));
+```
+
+## 관련 문서
+
+- [Advanced Features](/ko/docs/advanced-features) — 헤더 파라미터, 파일 업로드, 식별자가 아닌 파라미터 이름.
+- [Error Type](/ko/docs/error-type) — 타입이 적용된 `error.response?.data`.

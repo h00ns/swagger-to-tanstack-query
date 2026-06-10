@@ -1,0 +1,162 @@
+---
+title: 생성되는 파일
+description: 컨트롤러마다 생성되는 다섯 개 파일을 둘러봅니다.
+group: 출력
+order: 80
+---
+
+각 컨트롤러 폴더에는 `types.ts`, `apis.ts`, `queries.ts`, `mutations.ts`, 그리고
+barrel 역할을 하는 `index.ts`까지 다섯 개의 파일이 들어 있습니다. 아래 예시는
+`response.dataField: "data"`와 `error`를 설정한 Spring Boot(springdoc) API에서 나온
+**실제 출력**입니다.
+
+## `types.ts`
+
+컨트롤러의 operation에서 도달 가능한 모든 named 스키마가 전이적으로 이곳에
+생성됩니다. 객체 스키마는 `interface`가 되고, 유니온/enum은 `type` 별칭이 됩니다.
+`description`은 JSDoc으로 변환됩니다.
+
+```ts
+// contact/types.ts
+/** 공통 API 응답 엔벨롭 */
+export interface CommonResponseDetail {
+  result?: boolean;
+  data?: Detail;
+  message?: string;
+  errorCode?: string | null;
+}
+
+export interface Detail {
+  id?: number;
+  name: string;
+  status?: "ACTIVE" | "ARCHIVED" | "DELETED";
+  tags?: Array<Tag>;
+}
+```
+
+## `apis.ts`
+
+**여러분의** axios 인스턴스를 호출하는 일반 함수입니다. 모든 함수는 operation에
+필요한 `{ ...pathParams, body, params, headers }`를 모두 담은 **단일 객체 인자**를
+받습니다. 덕분에 호출 지점에서 인자를 이름으로 구분할 수 있고 순서에도 영향을 받지 않으며,
+이 점은 path 파라미터가 둘 이상인 엔드포인트에서 특히 중요합니다.
+
+```ts
+// contact/apis.ts
+import { axiosInstance as client } from "@/lib/axios";
+import type { CommonResponse } from "@/lib/axios";
+import type { Detail, Create } from "./types";
+
+/** 전화번호부 상세 조회 */
+export const getContact = ({ contactId }: { contactId: number }) =>
+  client.get<CommonResponse<Detail>>(`/api/v1/contacts/${contactId}`).then((res) => res.data.data);
+
+/** 전화번호부 생성 */
+export const createContact = ({ body }: { body: Create }) =>
+  client.post<CommonResponse<Create>>(`/api/v1/contacts`, body).then((res) => res.data.data);
+
+/** 전화번호부 단건 삭제 (소프트) */
+export const deleteContact = ({ contactId }: { contactId: number }) =>
+  client.delete<CommonResponse<unknown>>(`/api/v1/contacts/${contactId}`).then((res) => res.data.data);
+```
+
+## `queries.ts`
+
+v5의 **`queryOptions`** 패턴으로, `<controller>Queries`로 export됩니다. `queryKey`는
+`[controllerDir, operationName, ...args]` 형태입니다.
+
+```ts
+// contact/queries.ts
+import { queryOptions } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
+import type { ApiError } from "@/lib/axios";
+import * as apis from "./apis";
+
+export const contactQueries = {
+  getContact: (args: { contactId: number }) =>
+    queryOptions<Awaited<ReturnType<typeof apis.getContact>>, AxiosError<ApiError>>({
+      queryKey: ["contact", "getContact", args],
+      queryFn: () => apis.getContact(args),
+    }),
+};
+```
+
+> 이 옵션 객체는 `useQuery`, `useSuspenseQuery`, `prefetchQuery`,
+> `ensureQueryData`, `invalidateQueries` 등에서 재사용할 수 있습니다.
+
+## `mutations.ts`
+
+변경(mutating) 엔드포인트마다 `useXxx` 훅이 하나씩 생성됩니다. 각 훅은 선택적인
+`UseMutationOptions`(단, `mutationFn` 제외)를 받으므로 `onSuccess`, `onError`,
+`retry` 등을 전달할 수 있습니다. mutation의 `variables`는 api가 받는 것과 동일한
+단일 객체(`{ ...pathParams, body, params, headers }`)입니다.
+
+```ts
+// contact/mutations.ts
+import { useMutation } from "@tanstack/react-query";
+import type { UseMutationOptions } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
+import type { ApiError } from "@/lib/axios";
+import * as apis from "./apis";
+import type { Create, Update } from "./types";
+
+/** 전화번호부 생성 */
+export const useCreateContact = (
+  options?: Omit<
+    UseMutationOptions<
+      Awaited<ReturnType<typeof apis.createContact>>,
+      AxiosError<ApiError>,
+      { body: Create }
+    >,
+    "mutationFn"
+  >,
+) =>
+  useMutation({
+    mutationFn: (vars: { body: Create }) => apis.createContact(vars),
+    ...options,
+  });
+
+/** 전화번호부 수정 (path param + body) */
+export const useUpdateContact = (
+  options?: Omit<
+    UseMutationOptions<
+      Awaited<ReturnType<typeof apis.updateContact>>,
+      AxiosError<ApiError>,
+      { contactId: number; body: Update }
+    >,
+    "mutationFn"
+  >,
+) =>
+  useMutation({
+    mutationFn: (vars: { contactId: number; body: Update }) => apis.updateContact(vars),
+    ...options,
+  });
+```
+
+> mutation의 `variables`는 곧 api의 객체 인자 **그 자체**이므로, 모든 훅은 동일한
+> 방식으로 호출됩니다: `mutate({ ...pathParams, body, params })`.
+
+## `index.ts`
+
+컨트롤러별 barrel입니다.
+
+```ts
+// contact/index.ts
+export * from "./types";
+export * from "./apis";
+export * from "./queries";
+export * from "./mutations";
+```
+
+특정 파일에서 import하거나 폴더에서 import할 수 있습니다.
+
+```ts
+import { contactQueries } from "@/api/contact/queries";
+// or
+import { contactQueries, useCreateContact, type Detail } from "@/api/contact";
+```
+
+## 관련 문서
+
+- [Output Structure](/ko/docs/output-structure) — 폴더 구조.
+- [Using the Generated Code](/ko/docs/using-generated-code) — 쿼리, mutation, 무효화, prefetch.

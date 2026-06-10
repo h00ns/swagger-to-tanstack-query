@@ -1,0 +1,86 @@
+---
+title: Response Envelope
+description: 공통 성공 엔벨롭을 벗겨내, 훅이 내부 payload를 반환하도록 합니다.
+group: 설정
+order: 50
+---
+
+대부분의 API는 모든 응답을 공통 엔벨롭(envelope)으로 감쌉니다. `response.dataField`를
+사용하면 생성된 api가 이를 대신 벗겨내 주므로, 훅은 전체 엔벨롭이 아니라 **내부 payload**를
+반환합니다.
+
+## 문제 상황
+
+전형적인 성공 엔벨롭은 다음과 같은 형태입니다.
+
+```jsonc
+// CommonResponseDetail
+{ "result": true, "data": { /* the real payload */ }, "message": "OK", "errorCode": null }
+```
+
+## `dataField`로 벗겨내기
+
+`response.dataField`를 설정하면 생성된 api가 이를 벗겨냅니다.
+
+```jsonc
+"response": { "dataField": "data" }
+```
+
+```ts
+// off  →  client.get<CommonResponseDetail>(url).then((res) => res.data);       // CommonResponseDetail
+// on   →  client.get<CommonResponseDetail>(url).then((res) => res.data.data);  // Detail | undefined
+```
+
+```ts
+const { data } = useQuery(contactQueries.getContact({ contactId: 1 }));
+//      ^? Detail | undefined          (not CommonResponseDetail)
+```
+
+- 성공 스키마에 해당 필드가 실제로 존재하는 operation에만 적용됩니다.
+  `void`/`204` 응답과 필드가 없는 본문은 그대로 둡니다.
+- axios 제네릭은 여전히 전체 엔벨롭 타입을 사용하므로, 벗겨내는 과정도 타입 안전합니다.
+
+## 제네릭 엔벨롭 (권장)
+
+기본적으로 각 엔드포인트는 자체 `CommonResponseXxx` 인터페이스를 갖게 되어
+`result` / `message` / `errorCode`가 곳곳에 중복됩니다. 대신 모듈에 **제네릭 엔벨롭
+하나**를 정의하고 `response.envelope`로 참조하세요.
+
+```ts
+// @/lib/axios.ts
+export interface CommonResponse<T> {
+  result?: boolean;
+  data?: T;
+  message?: string;
+  errorCode?: string | null;
+}
+```
+
+```jsonc
+"response": {
+  "dataField": "data",
+  "envelope": { "path": "@/lib/axios", "name": "CommonResponse" }
+}
+```
+
+이제 응답은 `CommonResponse<Inner>`로 타입이 지정되며, 엔드포인트별 엔벨롭
+인터페이스는 **더 이상 생성되지 않습니다.**
+
+```ts
+// apis.ts
+export const getContact = ({ contactId }: { contactId: number }) =>
+  client.get<CommonResponse<Detail>>(`/api/v1/contacts/${contactId}`).then((res) => res.data.data);
+
+export const deleteContact = ({ contactId }: { contactId: number }) =>
+  client.delete<CommonResponse<unknown>>(`/api/v1/contacts/${contactId}`).then((res) => res.data.data);
+```
+
+- `dataField`가 필요합니다(타입 파라미터 자리로 사용됩니다).
+- 내부 타입(`Detail`, `Array<User>`, …)은 엔벨롭의 `dataField`에서 추출됩니다.
+  void payload는 `CommonResponse<unknown>`이 됩니다.
+- `name`은 named export 또는 default export일 수 있습니다(`client`/`error`와 동일한 규칙).
+
+## 관련 문서
+
+- [Configuration](/ko/docs/configuration) — 전체 필드 레퍼런스.
+- [Error Type](/ko/docs/error-type) — `AxiosError<T>`로 에러 타입 지정하기.

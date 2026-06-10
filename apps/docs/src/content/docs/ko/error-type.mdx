@@ -1,0 +1,41 @@
+---
+title: Error Type
+description: 모든 훅의 error를 여러분의 에러 본문 타입을 담은 AxiosError로 지정합니다.
+group: 설정
+order: 60
+---
+
+axios는 항상 `AxiosError`를 던집니다. `error`를 여러분의 에러 본문 타입으로 지정하면
+모든 훅의 `error`가 `AxiosError<YourType>`이 되며, 이 설정은 훅 단위로 적용됩니다.
+
+## 설정
+
+```jsonc
+"error": { "path": "@/lib/axios", "name": "ApiError" }
+```
+
+## 호출 지점의 타입 안전한 에러
+
+```ts
+const { error } = useQuery(contactQueries.getContact({ contactId: 1 }));
+//      ^? AxiosError<ApiError> | null
+//         error.response?.data.errorCode  ✅ typed
+
+const create = useCreateContact({
+  onError: (err) => {
+    //        ^? AxiosError<ApiError>
+    toast(err.response?.data.message);
+  },
+});
+```
+
+## 적용 방식
+
+쿼리는 `queryOptions<TData, AxiosError<ApiError>>`를, mutation은
+`UseMutationOptions<TData, AxiosError<ApiError>, TVars>`를 생성합니다. `error`를
+생략하면 훅은 TanStack의 `DefaultError`로 동작합니다.
+
+## 관련 문서
+
+- [Configuration](/ko/docs/configuration) — 전체 필드 레퍼런스.
+- [Response Envelope](/ko/docs/response-envelope) — 성공 엔벨롭을 벗겨냅니다.

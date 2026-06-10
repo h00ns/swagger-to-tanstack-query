@@ -1,0 +1,69 @@
+---
+title: 설정
+description: swagger-to-tanstack-query.config.json의 모든 필드를 설명합니다.
+group: 설정
+order: 40
+---
+
+설정 파일 `swagger-to-tanstack-query.config.json`은 명령어를 실행하는 디렉터리
+(프로젝트 루트)에서 읽어 옵니다.
+
+## 전체 예시
+
+```jsonc
+{
+  // Swagger/OpenAPI document URL (a local file path also works).
+  "url": "https://api.example.com/v3/api-docs",
+
+  // Output directory, relative to cwd. Wiped & regenerated on every run.
+  "output": "./src/api",
+
+  // Your axios instance.
+  "client": {
+    "path": "@/lib/axios",   // import path written verbatim into generated files
+    "name": "axiosInstance"  // named export; omit (or "default") for a default import
+  },
+
+  // Optional: common success-envelope handling.
+  // `envelope` reuses one generic CommonResponse<T> instead of per-endpoint interfaces.
+  "response": {
+    "dataField": "data",
+    "envelope": { "path": "@/lib/axios", "name": "CommonResponse" }
+  },
+
+  // Optional: common error type, applied as AxiosError<T> to hooks.
+  "error": { "path": "@/lib/axios", "name": "ApiError" },
+
+  // Optional: run Prettier on output. Default true.
+  "format": true
+}
+```
+
+## 필드
+
+| 필드                  | 타입      | 필수     | 기본값      | 설명                                                                          |
+| -------------------- | --------- | :------: | ----------- | ---------------------------------------------------------------------------- |
+| `url`                | `string`  |    ✅    | —           | Swagger/OpenAPI 문서 URL 또는 로컬 경로. Swagger 2.0 & OpenAPI 3.x 지원.       |
+| `output`             | `string`  |    ✅    | —           | 출력 디렉터리(cwd 기준 상대 경로). **매 실행마다 비우고 재생성합니다.**          |
+| `client.path`        | `string`  |    ✅    | —           | axios 인스턴스 모듈의 import 경로.                                             |
+| `client.name`        | `string`  |    –     | `"default"` | import할 named export. default export인 경우 생략하세요.                        |
+| `response.dataField` | `string`  |    –     | _(off)_     | 이 엔벨롭 필드를 payload로 꺼냅니다. [Response Envelope](/ko/docs/response-envelope) 참고. |
+| `response.envelope`  | `object`  |    –     | _(off)_     | 제네릭 엔벨롭 타입의 `{ path, name }` → `Envelope<Inner>`. `dataField`가 필요합니다. |
+| `error.path`         | `string`  |    –     | —           | 에러 본문 타입의 import 경로. [Error Type](/ko/docs/error-type) 참고.          |
+| `error.name`         | `string`  |    –     | `"default"` | 에러 타입의 named export. default export인 경우 생략하세요.                     |
+| `format`             | `boolean` |    –     | `true`      | 생성된 파일을 Prettier로 포맷합니다.                                           |
+
+## `client.name` 동작 방식
+
+`name`은 생성된 `apis.ts`에 named import가 작성될지 default import가 작성될지를
+결정합니다.
+
+| 설정                                                  | `apis.ts`에 생성되는 import                              |
+| ---------------------------------------------------- | -------------------------------------------------------- |
+| `{ "path": "@/lib/axios", "name": "axiosInstance" }` | `import { axiosInstance as client } from "@/lib/axios";` |
+| `{ "path": "@/lib/axios" }` (no `name`)              | `import client from "@/lib/axios";`                      |
+
+## 관련 문서
+
+- [Response Envelope](/ko/docs/response-envelope) — 성공 엔벨롭을 벗겨냅니다.
+- [Error Type](/ko/docs/error-type) — 모든 훅의 `error`를 `AxiosError<T>`로 타입 지정합니다.

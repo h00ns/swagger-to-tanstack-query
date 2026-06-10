@@ -1,0 +1,39 @@
+---
+title: Programmatic API
+description: Generate from code instead of the CLI.
+group: Reference
+order: 130
+---
+
+In addition to the CLI, you can drive the generator from code with
+`generateFromConfig` and `generate`.
+
+## Usage
+
+```ts
+import { generateFromConfig, generate } from "swagger-to-tanstack-query";
+
+// read swagger-to-tanstack-query.config.json from cwd
+await generateFromConfig();
+
+// or pass a fully-resolved config
+await generate({
+  url: "https://api.example.com/v3/api-docs",
+  output: "./src/api",
+  outputDir: "/abs/path/src/api",
+  client: { path: "@/lib/axios", name: "axiosInstance" },
+  response: { dataField: "data", envelope: { path: "@/lib/axios", name: "CommonResponse" } },
+  error: { path: "@/lib/axios", name: "ApiError" },
+  format: true,
+});
+```
+
+- `generateFromConfig()` reads `swagger-to-tanstack-query.config.json` from the
+  current working directory — the same behavior as the CLI.
+- `generate(config)` takes a fully-resolved config, including an absolute
+  `outputDir`.
+
+## Related
+
+- [Configuration](/docs/configuration) — what each field means.
+- [Quick Start](/docs/quick-start) — the CLI flow.

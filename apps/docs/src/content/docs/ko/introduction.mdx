@@ -1,0 +1,41 @@
+---
+title: 소개
+description: Swagger/OpenAPI 스펙을, 직접 만든 axios 인스턴스를 사용하는 타입 안전한 TanStack Query 코드로 변환합니다.
+group: 시작하기
+order: 10
+---
+
+`swagger-to-tanstack-query`는 **Swagger / OpenAPI** 스펙을
+**여러분의 axios 인스턴스**를 사용하는 타입 안전한 **TanStack Query** 코드로 변환하는
+코드 생성기입니다. 출력은 컨트롤러 단위로 나뉩니다.
+
+설정 파일을 추가하고 Swagger URL을 지정한 뒤 스크립트 하나만 실행하면,
+컨트롤러별로 깔끔하게 정리된 폴더 구조 안에 완전한 타입이 적용된 **API 함수**,
+**`queryOptions`**, **`useMutation` 훅**이 만들어집니다.
+
+## 파이프라인
+
+전체 워크플로는 설정 파일 하나, 명령어 하나, 그리고 컨트롤러마다 생성되는 폴더로 구성됩니다.
+
+```
+swagger-to-tanstack-query.config.json   ──▶   npm run codegen   ──▶   src/api/<controller>/{index,types,apis,queries,mutations}.ts
+```
+
+## 주요 기능
+
+- 🗂️ **컨트롤러 기반 출력** — OpenAPI 태그마다 폴더 하나씩, 각각 독립적으로 완결됩니다.
+- 🪝 **TanStack Query v5** — `GET`/`HEAD` → `queryOptions`, `POST/PUT/PATCH/DELETE` → `useXxx` mutation 훅.
+- 🔌 **내 axios 그대로 사용** — baseURL / 인증 / interceptor를 여러분의 인스턴스에 그대로 둡니다.
+- 📦 **응답 엔벨롭(envelope) 벗기기** — `{ data, message, … }` 전체가 아니라 내부 payload만 반환합니다.
+- 🚨 **타입이 적용된 에러** — 모든 훅의 `error`가 `AxiosError<YourErrorType>`로 타입이 지정됩니다.
+- 🧬 **충실한 타입 변환** — `$ref`, `allOf`/`oneOf`/`anyOf`, enum, nullable, 배열, 맵, binary→`Blob`.
+- 📨 **헤더 파라미터 & 파일 업로드** — 헤더 파라미터는 axios config로, `multipart/form-data`는 `FormData`로 처리합니다.
+- 🧾 **문서 보존** — `summary`와 `@deprecated`가 JSDoc으로 변환됩니다.
+- 🔁 **Swagger 2.0 & OpenAPI 3.x** 모두 지원.
+- 🛡️ **안전한 식별자** — 예약어와 wire 이름 불일치를 자동으로 처리합니다.
+
+## 다음 단계
+
+- [Quick Start](/ko/docs/quick-start)를 따라 네 단계로 코드를 생성해 보세요.
+- [Installation](/ko/docs/installation)과 peer dependency에 대해 알아보세요.
+- [Playground](/playground)에서 직접 실행해 보세요.

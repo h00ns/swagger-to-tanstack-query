@@ -1,0 +1,310 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Button from "../Button.astro";
+import StaticCode from "./StaticCode.astro";
+import CodeMorph from "./CodeMorph.tsx";
+import FeatureGrid from "./FeatureGrid.tsx";
+import HeroIntro from "./HeroIntro.tsx";
+import type { Locale } from "../../i18n/ui";
+import { docsPath } from "../../i18n/ui";
+import { getLanding } from "../../i18n/landing";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const copy = getLanding(locale);
+const docsHref = docsPath(locale, "introduction");
+
+const installCmd = "npm i -D swagger-to-tanstack-query";
+
+const configJson = `{
+  "url": "https://api.example.com/v3/api-docs",
+  "output": "./src/api",
+  "client": { "path": "@/lib/axios", "name": "axiosInstance" },
+  "response": {
+    "dataField": "data",
+    "envelope": { "path": "@/lib/axios", "name": "CommonResponse" }
+  },
+  "error": { "path": "@/lib/axios", "name": "ApiError" }
+}`;
+
+const codegenOut = `$ npm run codegen
+
+swagger-to-tanstack-query
+  spec   : https://api.example.com/v3/api-docs
+  output : ./src/api
+  client : axiosInstance from "@/lib/axios"
+  generating...
+  done. 13 controllers, 65 files.`;
+
+const useSnippet = `import { useQuery } from "@tanstack/react-query";
+import { contactQueries } from "@/api/contact";
+
+const { data } = useQuery(
+  contactQueries.getContact({ contactId: 1 }),
+);
+//      ^? Detail | undefined`;
+
+const typesTs = `// contact/types.ts
+/** Common API response envelope */
+export interface Detail {
+  id?: number;
+  name: string;
+  status?: "ACTIVE" | "ARCHIVED" | "DELETED";
+  tags?: Array<Tag>;
+}`;
+
+const apisTs = `// contact/apis.ts
+import { axiosInstance as client } from "@/lib/axios";
+import type { CommonResponse } from "@/lib/axios";
+import type { Detail, Create } from "./types";
+
+/** Get contact details */
+export const getContact = ({ contactId }: { contactId: number }) =>
+  client.get<CommonResponse<Detail>>(\`/api/v1/contacts/\${contactId}\`).then((res) => res.data.data);
+
+/** Create a contact */
+export const createContact = ({ body }: { body: Create }) =>
+  client.post<CommonResponse<Create>>(\`/api/v1/contacts\`, body).then((res) => res.data.data);`;
+
+const queriesTs = `// contact/queries.ts
+import { queryOptions } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
+import type { ApiError } from "@/lib/axios";
+import * as apis from "./apis";
+
+export const contactQueries = {
+  getContact: (args: { contactId: number }) =>
+    queryOptions<Awaited<ReturnType<typeof apis.getContact>>, AxiosError<ApiError>>({
+      queryKey: ["contact", "getContact", args],
+      queryFn: () => apis.getContact(args),
+    }),
+};`;
+
+const mutationsTs = `// contact/mutations.ts
+import { useMutation } from "@tanstack/react-query";
+import type { UseMutationOptions } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
+import type { ApiError } from "@/lib/axios";
+import * as apis from "./apis";
+import type { Create } from "./types";
+
+/** Create a contact */
+export const useCreateContact = (
+  options?: Omit<
+    UseMutationOptions<Awaited<ReturnType<typeof apis.createContact>>, AxiosError<ApiError>, { body: Create }>,
+    "mutationFn"
+  >,
+) =>
+  useMutation({
+    mutationFn: (vars: { body: Create }) => apis.createContact(vars),
+    ...options,
+  });`;
+
+const indexTs = `// contact/index.ts
+export * from "./types";
+export * from "./apis";
+export * from "./queries";
+export * from "./mutations";`;
+
+const showcaseFiles = [
+  { name: "types.ts", code: typesTs },
+  { name: "apis.ts", code: apisTs },
+  { name: "queries.ts", code: queriesTs },
+  { name: "mutations.ts", code: mutationsTs },
+  { name: "index.ts", code: indexTs },
+];
+
+const stepNums = ["01", "02", "03"] as const;
+const stepCode = [
+  { code: configJson, lang: "json" as const, file: "swagger-to-tanstack-query.config.json" },
+  { code: codegenOut, lang: "bash" as const, file: "terminal" },
+  { code: useSnippet, lang: "tsx" as const, file: "ContactName.tsx" },
+];
+
+const steps = copy.howItWorks.steps.map((step, i) => ({
+  num: stepNums[i],
+  title: step.title,
+  body: step.body,
+  ...stepCode[i],
+}));
+---
+
+<BaseLayout title={copy.meta.title} description={copy.meta.description} lang={locale}>
+  <!-- ============================ HERO ============================ -->
+  <section class="relative overflow-hidden" style="min-height: min(92vh, 880px)">
+    <!-- Ambient blobs + dotted grid (decorative) -->
+    <div class="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
+      <div
+        class="s2tq-blob absolute -left-40 -top-40 h-[520px] w-[520px] rounded-full"
+        style="background: var(--glow-ambient-cyan); filter: blur(40px); opacity: 0.6"
+      >
+      </div>
+      <div
+        class="s2tq-blob s2tq-blob--alt absolute -bottom-40 -right-40 h-[520px] w-[520px] rounded-full"
+        style="background: var(--glow-ambient-violet); filter: blur(40px); opacity: 0.6"
+      >
+      </div>
+      <div class="dotted-grid absolute inset-0"></div>
+    </div>
+
+    <div
+      class="mx-auto grid max-w-[var(--container-max)] grid-cols-1 items-center gap-12 px-6 py-24 sm:px-8 lg:grid-cols-12 lg:gap-8 lg:py-32"
+    >
+      <!-- Copy (cols 1–7) -->
+      <div class="lg:col-span-6">
+        <HeroIntro
+          client:load
+          installCmd={installCmd}
+          eyebrow={copy.hero.eyebrow}
+          title={copy.hero.title}
+          subhead={copy.hero.subhead}
+          ctaPrimary={copy.hero.ctaPrimary}
+          ctaSecondary={copy.hero.ctaSecondary}
+          badges={copy.hero.badges}
+          docsHref={docsHref}
+        />
+      </div>
+
+      <!-- Demo (cols 7–12) -->
+      <div class="lg:col-span-6 lg:col-start-7">
+        <CodeMorph client:visible />
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================== FEATURE HIGHLIGHTS ====================== -->
+  <section
+    class="mx-auto max-w-[var(--container-max)] px-6 py-20 sm:px-8 lg:py-32"
+    aria-labelledby="features-heading"
+  >
+    <h2
+      id="features-heading"
+      class="max-w-[20ch] font-display text-3xl font-semibold tracking-[-0.015em] text-text sm:text-4xl"
+    >
+      {copy.features.heading}
+    </h2>
+    <div class="mt-12">
+      <FeatureGrid client:visible items={copy.features.items} />
+    </div>
+  </section>
+
+  <!-- ========================= HOW IT WORKS ========================= -->
+  <section
+    class="mx-auto max-w-[var(--container-max)] px-6 py-20 sm:px-8 lg:py-32"
+    aria-labelledby="how-heading"
+  >
+    <h2
+      id="how-heading"
+      class="font-display text-3xl font-semibold tracking-[-0.015em] text-text sm:text-4xl"
+    >
+      {copy.howItWorks.heading}
+    </h2>
+    <ol class="mt-12 grid grid-cols-1 gap-8 md:grid-cols-3">
+      {
+        steps.map((step) => (
+          <li class="flex flex-col">
+            <div class="flex items-baseline gap-3">
+              <span class="font-mono text-2xl font-semibold text-accent">{step.num}</span>
+              <h3 class="text-lg font-semibold text-text">{step.title}</h3>
+            </div>
+            <p class="mt-2 text-sm leading-relaxed text-text-muted">{step.body}</p>
+            <div class="mt-4">
+              <StaticCode code={step.code} lang={step.lang} title={step.file} />
+            </div>
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+
+  <!-- ======================= OUTPUT SHOWCASE ======================= -->
+  <section
+    class="mx-auto max-w-[var(--container-max)] px-6 py-20 sm:px-8 lg:py-32"
+    aria-labelledby="output-heading"
+  >
+    <h2
+      id="output-heading"
+      class="font-display text-3xl font-semibold tracking-[-0.015em] text-text sm:text-4xl"
+    >
+      {copy.outputShowcase.heading}
+    </h2>
+    <p class="mt-4 max-w-[60ch] text-lg leading-relaxed text-text-muted">
+      {copy.outputShowcase.subhead.lead}<code class="font-mono text-primary"
+        >{copy.outputShowcase.subhead.code1}</code
+      >{copy.outputShowcase.subhead.mid}<code class="font-mono text-primary"
+        >{copy.outputShowcase.subhead.code2}</code
+      >{copy.outputShowcase.subhead.tail}
+    </p>
+
+    <div class="mt-12 grid grid-cols-1 gap-8 lg:grid-cols-[200px_1fr]">
+      <!-- File list -->
+      <ul class="flex flex-row flex-wrap gap-2 lg:flex-col lg:gap-1" aria-hidden="true">
+        <li class="font-mono text-sm text-text-muted">
+          <span class="text-primary">▾</span> contact/
+        </li>
+        {
+          showcaseFiles.map((f) => (
+            <li class="font-mono text-[13px] text-text-faint lg:pl-4">• {f.name}</li>
+          ))
+        }
+      </ul>
+
+      <!-- Code blocks -->
+      <div class="flex flex-col gap-6">
+        {
+          showcaseFiles.map((f) => (
+            <StaticCode code={f.code} lang="ts" title={`contact/${f.name}`} />
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================== CTA BAND =========================== -->
+  <section class="relative overflow-hidden border-y border-border-muted bg-bg-subtle" aria-labelledby="cta-heading">
+    <div
+      class="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[480px] w-[720px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+      style="background: var(--glow-ambient-cyan); filter: blur(48px); opacity: 0.4"
+      aria-hidden="true"
+    >
+    </div>
+    <div class="mx-auto flex max-w-[var(--container-max)] flex-col items-center px-6 py-24 text-center sm:px-8">
+      <h2
+        id="cta-heading"
+        class="font-display text-3xl font-semibold tracking-[-0.02em] text-text sm:text-4xl lg:text-5xl"
+      >
+        {copy.ctaBand.heading}
+      </h2>
+      <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+        <Button href="/playground" variant="primary" size="lg">{copy.ctaBand.ctaPrimary}</Button>
+        <Button href={docsHref} variant="secondary" size="lg">{copy.ctaBand.ctaSecondary}</Button>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .s2tq-blob {
+    animation: s2tq-drift 18s var(--ease-in-out) infinite alternate;
+  }
+  .s2tq-blob--alt {
+    animation-duration: 21s;
+    animation-direction: alternate-reverse;
+  }
+  @keyframes s2tq-drift {
+    from {
+      transform: translate(-12px, -12px);
+    }
+    to {
+      transform: translate(12px, 12px);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .s2tq-blob {
+      animation: none;
+    }
+  }
+</style>
