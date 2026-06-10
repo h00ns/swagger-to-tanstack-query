@@ -9,6 +9,9 @@ import { s2tqNight } from "./src/lib/shiki-theme.ts";
 // https://astro.build/config
 export default defineConfig({
   site: "https://swagger-to-tanstack-query.vercel.app",
+  // Emit to the repo-root `dist/` so Vercel (which serves `dist` from the
+  // repository root) finds the output without extra Project Settings.
+  outDir: "../../dist",
   // Static output served at the domain root (Vercel). No `base` path.
   integrations: [
     // expressiveCode must be registered before mdx so it can process code blocks.
