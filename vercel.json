@@ -3,5 +3,5 @@
   "framework": null,
   "buildCommand": "pnpm -r build",
   "installCommand": "pnpm install",
-  "outputDirectory": "dist"
+  "outputDirectory": "apps/docs/dist"
 }
