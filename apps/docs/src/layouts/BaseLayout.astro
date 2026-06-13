@@ -5,6 +5,7 @@ import "@fontsource-variable/space-grotesk";
 import "../styles/global.css";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
+import { locales, switchLocalePath, type Locale } from "../i18n/ui";
 
 interface Props {
   title?: string;
@@ -12,7 +13,15 @@ interface Props {
   /** Full-bleed app pages (playground) opt out of the centered shell + footer. */
   appShell?: boolean;
   /** Document language for the <html lang> attribute. */
-  lang?: string;
+  lang?: Locale;
+  /** Whether this page has en/ko equivalents (emits hreflang alternates). */
+  localized?: boolean;
+  /** schema.org page type used for the JSON-LD block. */
+  pageType?: "website" | "article";
+  /** OG/Twitter share image, resolved against the site origin. */
+  image?: string;
+  /** Keep this page out of search indexes. */
+  noindex?: boolean;
 }
 
 const {
@@ -20,9 +29,60 @@ const {
   description = "Generate fully-typed TanStack Query code from a Swagger/OpenAPI spec — one folder per controller, using your own axios instance.",
   appShell = false,
   lang = "en",
+  localized = true,
+  pageType = "website",
+  image = "/og.png",
+  noindex = false,
 } = Astro.props;
 
 const fullTitle = title === "swagger-to-tanstack-query" ? title : `${title} · swagger-to-tanstack-query`;
+
+// Resolve absolute URLs against the configured `site`.
+const site = Astro.site ?? new URL("https://swagger-to-tanstack-query.vercel.app");
+const path = Astro.url.pathname.replace(/\/+$/, "") || "/";
+const abs = (p: string) => new URL(p, site).href;
+
+const canonical = abs(path);
+const ogImage = abs(image);
+const ogLocale = lang === "ko" ? "ko_KR" : "en_US";
+const ogLocaleAlt = lang === "ko" ? "en_US" : "ko_KR";
+
+// Per-locale equivalents for this URL (only when the page is localized).
+const bcp47 = (l: Locale) => (l === "ko" ? "ko-KR" : "en-US");
+const alternates = localized
+  ? locales.map((l) => ({ hreflang: bcp47(l), href: abs(switchLocalePath(path, l)) }))
+  : [];
+const xDefault = localized ? abs(switchLocalePath(path, "en")) : null;
+
+const robots = noindex ? "noindex, nofollow" : "index, follow, max-image-preview:large";
+
+// schema.org: describe the project on every page; add an Article node for docs.
+const projectLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareSourceCode",
+  name: "swagger-to-tanstack-query",
+  description:
+    "Generate fully type-safe TanStack Query (React Query) code — queryOptions hooks, axios API functions and TypeScript types — from a Swagger/OpenAPI spec, split one folder per controller.",
+  url: site.href,
+  codeRepository: "https://github.com/h00ns/swagger-to-tanstack-query",
+  programmingLanguage: "TypeScript",
+  runtimePlatform: "Node.js",
+  license: "https://opensource.org/licenses/MIT",
+  author: { "@type": "Person", name: "h00ns", url: "https://github.com/h00ns" },
+};
+const articleLd =
+  pageType === "article"
+    ? {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        headline: title,
+        description,
+        inLanguage: lang === "ko" ? "ko-KR" : "en-US",
+        url: canonical,
+        isPartOf: { "@type": "WebSite", name: "swagger-to-tanstack-query", url: site.href },
+        author: { "@type": "Person", name: "h00ns", url: "https://github.com/h00ns" },
+      }
+    : null;
 ---
 
 <!doctype html>
@@ -31,12 +91,41 @@ const fullTitle = title === "swagger-to-tanstack-query" ? title : `${title} · s
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#0B0E14" />
+
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
+    <meta name="robots" content={robots} />
+    <link rel="canonical" href={canonical} />
+
+    <!-- i18n alternates -->
+    {alternates.map((a) => <link rel="alternate" hreflang={a.hreflang} href={a.href} />)}
+    {xDefault && <link rel="alternate" hreflang="x-default" href={xDefault} />}
+
+    <!-- Open Graph -->
+    <meta property="og:site_name" content="swagger-to-tanstack-query" />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={pageType} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:alt" content="swagger-to-tanstack-query — Swagger/OpenAPI to TanStack Query" />
+    <meta property="og:locale" content={ogLocale} />
+    <meta property="og:locale:alternate" content={ogLocaleAlt} />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+
     <meta name="generator" content={Astro.generator} />
+
+    <script type="application/ld+json" set:html={JSON.stringify(projectLd)} />
+    {articleLd && <script type="application/ld+json" set:html={JSON.stringify(articleLd)} />}
   </head>
   <body>
     <a

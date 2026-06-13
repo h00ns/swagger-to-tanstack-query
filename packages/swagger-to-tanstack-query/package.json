@@ -1,8 +1,9 @@
 {
   "name": "swagger-to-tanstack-query",
   "version": "0.1.0",
-  "description": "Generate TanStack Query (queryOptions) hooks, APIs and types from a Swagger/OpenAPI spec, split by controller.",
+  "description": "Generate fully type-safe TanStack Query (React Query) code — queryOptions hooks, axios API functions and TypeScript types — from a Swagger/OpenAPI spec, split one folder per controller.",
   "type": "module",
+  "sideEffects": false,
   "bin": {
     "swagger-to-tanstack-query": "./dist/cli.js"
   },
@@ -36,20 +37,33 @@
   "keywords": [
     "swagger",
     "openapi",
+    "openapi3",
+    "swagger2",
     "tanstack",
+    "tanstack-query",
     "react-query",
     "queryOptions",
+    "queryKey",
     "codegen",
-    "axios"
+    "code-generator",
+    "openapi-codegen",
+    "swagger-codegen",
+    "openapi-typescript",
+    "api-client",
+    "axios",
+    "react",
+    "hooks",
+    "typescript",
+    "type-safe"
   ],
   "license": "MIT",
-  "author": "h00ns",
+  "author": "h00ns (https://github.com/h00ns)",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/h00ns/swagger-to-tanstack-query.git",
     "directory": "packages/swagger-to-tanstack-query"
   },
-  "homepage": "https://github.com/h00ns/swagger-to-tanstack-query#readme",
+  "homepage": "https://swagger-to-tanstack-query.vercel.app",
   "bugs": {
     "url": "https://github.com/h00ns/swagger-to-tanstack-query/issues"
   },

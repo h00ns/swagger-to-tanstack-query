@@ -21,7 +21,7 @@ interface Props {
 const { title, description, locale, current, headings } = Astro.props;
 ---
 
-<BaseLayout title={title} description={description} lang={locale}>
+<BaseLayout title={title} description={description} lang={locale} pageType="article">
   <!-- Reading-progress line, pinned just under the sticky header -->
   <div
     class="fixed inset-x-0 top-[var(--header-h)] z-[var(--z-sticky)] h-0.5 origin-left scale-x-0 bg-primary glow-primary-sm"
