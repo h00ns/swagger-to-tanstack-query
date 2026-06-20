@@ -31,6 +31,9 @@ useQuery(userQueries.getUser({ id: 1, headers: { "X-Trace-Id": traceId } }));
 
 binary 필드는 `Blob`이 되고, 요청 본문은 `FormData`로 조립됩니다.
 
+> **OpenAPI 3** 스펙에서 지원됩니다. Swagger 2.0의 `formData` 파라미터는 아직 요청
+> 본문으로 매핑되지 않습니다 — [제약 사항](/ko/docs/limitations)을 참고하세요.
+
 ```ts
 export const uploadAvatar = ({
   id,

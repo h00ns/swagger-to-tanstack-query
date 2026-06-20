@@ -7,16 +7,38 @@ order: 140
 
 흔한 문제와 그 해결 방법입니다.
 
-## "config not found"
+## "swagger-to-tanstack-query.config.json not found"
 
-파일 이름은 정확히 `swagger-to-tanstack-query.config.json`이어야 하며, 명령어를
-실행하는 디렉터리에 있어야 합니다.
+전체 에러 메시지는 `[config] swagger-to-tanstack-query.config.json not found in
+<dir>`입니다. 파일 이름은 정확히 `swagger-to-tanstack-query.config.json`이어야 하며,
+명령어를 실행하는 디렉터리에 있어야 합니다.
 
 ## Swagger UI URL만 있는 경우
 
 기계가 읽을 수 있는 스펙은 별도 경로로 제공됩니다. springdoc(Spring Boot)에서는 보통
 `https://<host>/v3/api-docs`입니다. 브라우저에서 열었을 때 JSON이 보인다면, 그 주소가
 바로 `url`입니다.
+
+## 스펙 URL에 인증이 걸려 있는 경우
+
+스펙 엔드포인트가 로그인, 베이직 인증, 베어러 토큰 뒤에 있으면 생성기가 직접
+받아올 수 없습니다. 스펙을 로컬 파일로 내려받은 뒤 `url`이 그 파일을 가리키게
+하세요 — `url`은 URL뿐 아니라 로컬 경로도 받습니다.
+
+```bash
+# 베어러 토큰
+curl -H "Authorization: Bearer <token>" https://<host>/v3/api-docs -o ./swagger.json
+# 또는 베이직 인증
+curl -u <user>:<pass> https://<host>/v3/api-docs -o ./swagger.json
+```
+
+```json
+{
+  "url": "./swagger.json",
+  "output": "./src/api",
+  "client": { "path": "@/lib/axios", "name": "axiosInstance" }
+}
+```
 
 ## 벗겨낸 뒤 `data`가 `T | undefined`인 경우
 

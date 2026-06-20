@@ -7,16 +7,38 @@ order: 140
 
 Common issues and how to resolve them.
 
-## "config not found"
+## "swagger-to-tanstack-query.config.json not found"
 
-The file must be named exactly `swagger-to-tanstack-query.config.json` and live in
-the directory you run the command from.
+The full error is `[config] swagger-to-tanstack-query.config.json not found in
+<dir>`. The file must be named exactly `swagger-to-tanstack-query.config.json` and
+live in the directory you run the command from.
 
 ## I only have the Swagger UI URL
 
 The machine-readable spec is served separately. For springdoc (Spring Boot) it's
 usually `https://<host>/v3/api-docs`. Open it in a browser; if you see JSON,
 that's your `url`.
+
+## My spec URL requires authentication
+
+If the spec endpoint sits behind a login, basic auth, or a bearer token, the
+generator can't fetch it directly. Download the spec to a local file and point
+`url` at that file — `url` accepts a local path as well as a URL.
+
+```bash
+# bearer token
+curl -H "Authorization: Bearer <token>" https://<host>/v3/api-docs -o ./swagger.json
+# or basic auth
+curl -u <user>:<pass> https://<host>/v3/api-docs -o ./swagger.json
+```
+
+```json
+{
+  "url": "./swagger.json",
+  "output": "./src/api",
+  "client": { "path": "@/lib/axios", "name": "axiosInstance" }
+}
+```
 
 ## `data` is `T | undefined` after unwrapping
 

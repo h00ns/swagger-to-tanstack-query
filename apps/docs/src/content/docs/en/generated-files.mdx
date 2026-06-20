@@ -7,8 +7,8 @@ order: 80
 
 Each controller folder contains five files: `types.ts`, `apis.ts`, `queries.ts`,
 `mutations.ts`, and an `index.ts` barrel. The examples below are **real output**
-from a Spring Boot (springdoc) API, with `response.dataField: "data"` and `error`
-configured.
+from a Spring Boot (springdoc) API configured with a generic `response.envelope`
+(`CommonResponse`), `response.dataField: "data"`, and `error`.
 
 ## `types.ts`
 
@@ -18,19 +18,16 @@ aliases. `description` becomes JSDoc.
 
 ```ts
 // contact/types.ts
-/** Common API response envelope */
-export interface CommonResponseDetail {
-  result?: boolean;
-  data?: Detail;
-  message?: string;
-  errorCode?: string | null;
-}
-
 export interface Detail {
   id?: number;
   name: string;
   status?: "ACTIVE" | "ARCHIVED" | "DELETED";
   tags?: Array<Tag>;
+}
+
+export interface Tag {
+  id?: number;
+  label?: string;
 }
 ```
 

@@ -333,8 +333,9 @@ hooks fall back to TanStack's `DefaultError`.
 
 ## Generated files
 
-The examples below are **real output** from a Spring Boot (springdoc) API, with
-`response.dataField: "data"` and `error` configured.
+The examples below are **real output** from a Spring Boot (springdoc) API
+configured with a generic `response.envelope` (`CommonResponse`),
+`response.dataField: "data"`, and `error`.
 
 ### `types.ts`
 
@@ -344,19 +345,16 @@ aliases. `description` becomes JSDoc.
 
 ```ts
 // contact/types.ts
-/** 공통 API 응답 엔벨롭 */
-export interface CommonResponseDetail {
-  result?: boolean;
-  data?: Detail;
-  message?: string;
-  errorCode?: string | null;
-}
-
 export interface Detail {
   id?: number;
   name: string;
   status?: "ACTIVE" | "ARCHIVED" | "DELETED";
   tags?: Array<Tag>;
+}
+
+export interface Tag {
+  id?: number;
+  label?: string;
 }
 ```
 
@@ -582,6 +580,9 @@ useQuery(userQueries.getUser({ id: 1, headers: { "X-Trace-Id": traceId } }));
 
 Binary fields become `Blob`, and the request body is assembled into a `FormData`:
 
+> Supported for **OpenAPI 3** specs — Swagger 2.0 `formData` parameters aren't
+> mapped to a request body yet (see **Limitations & roadmap** below).
+
 ```ts
 export const uploadAvatar = ({
   id,
@@ -664,13 +665,27 @@ await generate({
 
 ## Troubleshooting
 
-**“config not found”** — the file must be named exactly
-`swagger-to-tanstack-query.config.json` and live in the directory you run the
-command from.
+**“swagger-to-tanstack-query.config.json not found”** — the full error is
+`[config] swagger-to-tanstack-query.config.json not found in <dir>`. The file must
+be named exactly `swagger-to-tanstack-query.config.json` and live in the directory
+you run the command from.
 
 **I only have the Swagger UI URL** — the machine-readable spec is served
 separately. For springdoc (Spring Boot) it's usually `https://<host>/v3/api-docs`.
 Open it in a browser; if you see JSON, that's your `url`.
+
+**My spec URL requires authentication** — if the spec endpoint sits behind a
+login, basic auth, or a bearer token, the generator can't fetch it directly.
+Download the spec to a local file and point `url` at it (`url` accepts a local
+path as well as a URL):
+
+```bash
+curl -H "Authorization: Bearer <token>" https://<host>/v3/api-docs -o ./swagger.json
+```
+
+```json
+{ "url": "./swagger.json", "output": "./src/api", "client": { "path": "@/lib/axios", "name": "axiosInstance" } }
+```
 
 **`data` is `T | undefined` after unwrapping** — the envelope's `data` field is
 optional in your spec, so the unwrapped type is too. Narrow it (`data?.x`) or
@@ -690,6 +705,7 @@ verbatim. Make sure your `tsconfig.json` `paths` (and bundler) define the alias.
 - No `infiniteQueryOptions` generation for paginated endpoints.
 - Enums are string-literal unions (no `enum`/`as const` object option).
 - One success media type (`application/json`) per response.
+- File uploads (`multipart/form-data`) are supported for **OpenAPI 3 only** — Swagger 2.0 `formData` parameters are not yet mapped to a request body.
 
 ---
 

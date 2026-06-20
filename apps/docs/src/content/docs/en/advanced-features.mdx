@@ -31,6 +31,9 @@ useQuery(userQueries.getUser({ id: 1, headers: { "X-Trace-Id": traceId } }));
 
 Binary fields become `Blob`, and the request body is assembled into a `FormData`:
 
+> Supported for **OpenAPI 3** specs. Swagger 2.0 `formData` parameters aren't
+> mapped to a request body yet — see [Limitations](/docs/limitations).
+
 ```ts
 export const uploadAvatar = ({
   id,
